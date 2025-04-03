@@ -9,7 +9,7 @@ import tailwindcss from '@tailwindcss/vite'
 export default defineConfig({
   plugins: [vue(), vueDevTools(), tailwindcss()],
   server: {
-    port: parseInt(process.env.VITE_PORT || '8185'),
+    port: parseInt(process.env.VITE_PORT || '8088'),
   },
   resolve: {
     alias: {
