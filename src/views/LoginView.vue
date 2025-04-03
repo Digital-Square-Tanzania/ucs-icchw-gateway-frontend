@@ -1,14 +1,14 @@
 <template>
   <div id="login-box"
     class="flex lg:flex flex-row bg-white dark:bg-gray-800 shadow-lg lg:rounded-lg lg:m-20 lg:h-[75vh] md:h-[100vh] h-[100vh] lg:min-h-180 lg:min-w-200">
-    <div id="box-left" class="flex lg:w-1/2 md:w-full lg:flex flex-col md:h-[90vh]">
+    <div id="box-left" class="flex w-full lg:w-1/2 md:w-2/3 lg:flex flex-col md:h-[90%] mt-4 sm:mt-10">
       <div id="left-bottom" class="box-border lg:h-3/4 sm:h-[90vh] flex flex-row justify-center">
         <div id="bottom-form" class="lg:w-3/5 md:w-4/5 flex flex-col justify-center">
           <form @submit.prevent="handleLogin" class="w-full max-w-sm">
             <h2 class="text-3xl font-bold dark:text-white lg:top-0">Login</h2>
             <br>
             <p class="text-md dark:text-white">Please enter your email and password to login</p>
-            <div class="mb-4 mt-15">
+            <div class="mb-4 mt-15 lg:mt-15 md:mt-4">
               <label for="email" class="block text-sm dark:text-white">E-mail</label>
               <input type="text" id="email" name="email" v-model="email"
                 class="w-full px-2 text-lg py-4 border border-gray-300 rounded-md dark:bg-gray-700 dark:text-white shadow-sm" />

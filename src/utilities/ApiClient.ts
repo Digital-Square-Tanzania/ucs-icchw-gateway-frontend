@@ -28,7 +28,14 @@ class ApiClient {
     data: any,
     config?: AxiosRequestConfig,
   ): Promise<AxiosResponse<T>> {
-    return this.client.post<T>(url, data, config)
+    try {
+      return await this.client.post<T>(url, data, config)
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        return Promise.reject(error.response?.data?.message ?? error.message)
+      }
+      return Promise.reject(error)
+    }
   }
 
   public async put<T>(
