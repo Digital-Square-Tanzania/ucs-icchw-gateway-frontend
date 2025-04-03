@@ -7,15 +7,15 @@
         <tr class="bg-gray-100 dark:bg-ucs-900 text-left text-gray-700 dark:text-white">
           <th class="px-4 py-3">SN</th>
           <th class="px-4 py-3">First Name</th>
-          <th class="px-4 py-3">Middle Name</th>
+          <th class="px-4 py-3 hidden lg:flex">Middle Name</th>
           <th class="px-4 py-3">Last Name</th>
-          <th class="px-4 py-3">Userame</th>
+          <th class="px-4 py-3 hidden lg:flex">Userame</th>
           <th class="px-4 py-3">Facility</th>
-          <th class="px-4 py-3">Council</th>
+          <th class="px-4 py-3 hidden lg:flex">Council</th>
         </tr>
       </thead>
       <tbody>
-        <tr v-for="(user, index) in users" :key="user.id || index"
+        <!-- <tr v-for="(user, index) in users" :key="user.id || index"
           :class="[rowColor(index), 'text-gray-600 dark:text-gray-200']">
           <td class="px-2 py-1 md:py-2">{{ index + 1 }}</td>
           <td class="px-2 py-1 md:py-2">{{ user.firstName }}</td>
@@ -24,6 +24,16 @@
           <td class="px-2 py-1 md:py-2">{{ user.username }}</td>
           <td class="px-2 py-1 md:py-2">{{ user.facility }}</td>
           <td class="px-2 py-1 md:py-2">{{ user.council }}</td>
+        </tr> -->
+        <tr v-for="(user, index) in users" :key="user.id || index"
+          :class="index % 2 === 0 ? 'bg-ucs-100 dark:bg-ucs-700' : 'bg-white dark:bg-gray-800'">
+          <td class="px-2 py-1 md:py-2">{{ index + 1 }}</td>
+          <td class="px-2 py-1 md:py-2">{{ user.firstName }}</td>
+          <td class="visible px-2 py-1 md:py-2 hidden lg:flex">{{ user.middleName }}</td>
+          <td class="px-2 py-1 md:py-2">{{ user.lastName }}</td>
+          <td class="visible px-2 py-1 md:py-2 hidden lg:flex">{{ user.username }}</td>
+          <td class="px-2 py-1 md:py-2">{{ user.facility }}</td>
+          <td class="visible px-2 py-1 md:py-2 hidden lg:flex">{{ user.council }}</td>
         </tr>
       </tbody>
     </table>
