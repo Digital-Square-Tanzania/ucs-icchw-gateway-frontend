@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import axios, { AxiosError } from 'axios'
+import { AxiosError } from 'axios'
 import { useRouter } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
 import ApiClient from '@/utilities/ApiClient'
@@ -50,7 +50,7 @@ export const useAuthStore = defineStore('auth', {
         if (this.accessToken) localStorage.setItem('accessToken', this.accessToken)
         if (this.refreshToken) localStorage.setItem('refreshToken', this.refreshToken)
 
-        // ✅ Show success toast
+        // Show success toast
         toast.add({
           severity: 'success',
           summary: 'Login Successful',
@@ -62,7 +62,7 @@ export const useAuthStore = defineStore('auth', {
         this.error = axiosError.response?.data?.message || axiosError.message || 'Login failed'
         this.clearTokens()
 
-        // ❌ Show error toast
+        // Show error toast
         toast.add({
           severity: 'error',
           summary: 'Login Failed',
@@ -87,7 +87,7 @@ export const useAuthStore = defineStore('auth', {
         this.loading = false
         router.push('/login')
 
-        // ✅ Show logout success toast
+        // Show logout success toast
         toast.add({
           severity: 'info',
           summary: 'Logged Out',
@@ -98,7 +98,7 @@ export const useAuthStore = defineStore('auth', {
     },
 
     clearTokens() {
-      this.accessToken = '' // ✅ Use empty string to ensure reactivity
+      this.accessToken = ''
       this.refreshToken = ''
       localStorage.removeItem('accessToken')
       localStorage.removeItem('refreshToken')

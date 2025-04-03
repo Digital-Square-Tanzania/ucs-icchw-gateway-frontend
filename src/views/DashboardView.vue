@@ -7,7 +7,7 @@
       <InfoCard color="green">
         <template #heading>OpenMRS Users</template>
         <template #big-number>{{ dashboardData ? formatNumber(dashboardData.openMRSUsers) : 'Loading...'
-        }}</template>
+          }}</template>
         <template #percent>{{ openMRSUsersRatio ? Math.floor(openMRSUsersRatio) + '%' : 'Loading...' }}</template>
         <template #subtext>Last Sync: Mar 02, 2025</template>
         <template #icon>
@@ -17,7 +17,7 @@
       <InfoCard color="red">
         <template #heading>DHIS2 Users</template>
         <template #big-number>{{ dashboardData ? formatNumber(dashboardData.dhis2Users) : 'Loading...'
-          }}</template>
+        }}</template>
         <template #percent>{{ openMRSUsersRatio ? Math.ceil(100 - openMRSUsersRatio) + '%' : 'Loading...' }}</template>
         <template #subtext>Last Sync: Mar 02, 2025</template>
         <template #icon>
@@ -49,7 +49,7 @@
         <BigCard>
           <template #heading>UCS Teams</template>
           <template #big-number>{{ dashboardData ? formatNumber(dashboardData.ucsTeams) : 'Loading...'
-            }}</template>
+          }}</template>
           <template #subtext>Active UCS Teams</template>
           <template #chart>
             <DonutChart :data-values="teamCounts" :data-labels="teamSizeCategories"
