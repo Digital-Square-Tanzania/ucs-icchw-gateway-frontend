@@ -51,7 +51,7 @@
         <AutoComplete v-model="selectedFacility" :suggestions="facilitySuggestions" @complete="searchFacilities"
           placeholder="Search facility by name" class="w-full" optionLabel="name" forceSelection inputClass="w-full"
           size="large">
-          <!-- @ts-ignore -->
+          <!-- @vue-ignore -->
           <template #item="{ item }: any">
             {{ item.name }}
           </template>
@@ -63,6 +63,7 @@
         <AutoComplete v-model="selectedLocation" :suggestions="locationSuggestions" @complete="searchLocations"
           placeholder="Search location by name" class="w-full" optionLabel="name" forceSelection inputClass="w-full"
           size="large">
+          <!-- @vue-expect-error -->
           <template #item="{ item }: { item: Location }">
             {{ item.name }}
           </template>
