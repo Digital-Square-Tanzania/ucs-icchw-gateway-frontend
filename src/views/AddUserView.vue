@@ -65,7 +65,7 @@
           size="large">
           <!-- @vue-expect-error -->
           <template #item="{ item }: { item: Location }">
-            {{ item.name }}
+            {{ item.name }} - {{ item.locationCode }}
           </template>
         </AutoComplete>
       </div>
