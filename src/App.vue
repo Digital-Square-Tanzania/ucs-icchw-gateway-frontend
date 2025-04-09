@@ -17,8 +17,6 @@
       <div id="links-area" class="p-5">
         <MainLink route="/dashboard" title="Dashboard" />
         <MainLink route="/users" title="Users" />
-        <MainLink route="/locations" title="Locations" />
-        <MainLink route="/teams" title="Teams" />
       </div>
       <div id="user-area" class="p-4 tracking-wider w-1/4">
         <span
