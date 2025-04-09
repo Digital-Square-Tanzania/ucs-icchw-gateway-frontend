@@ -20,7 +20,7 @@
 
     <!-- Table Data -->
     <DataTable :value="filteredUsers" paginator :rows="pageSize" :rowsPerPageOptions="[5, 10, 20, 50]" :lazy="true"
-      :totalRecords="totalRecords" @page="onPageChange" :loading="loading" tableStyle="min-width: 50rem">
+      :totalRecords="totalRecords" @page="onPageChange" :loading="loading" tableStyle="min-width: 50rem" stripedRows>
       <template #header>
         <div class="flex justify-between items-center">
           <span class="text-lg font-semibold">{{ systemTitle }} Users</span>
