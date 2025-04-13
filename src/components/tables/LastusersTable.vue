@@ -1,8 +1,9 @@
 <template>
-  <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-2 overflow-x-hidden overflow-y-clip w-full">
+  <div
+    class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-2 overflow-x-hidden overflow-y-hidden w-full max-h-[35vh]">
     <h3 class="text-lg font-bold mb-5 text-gray-500">Last 10 Users</h3>
     <div v-if="users.length === 0" class="text-center text-gray-500 dark:text-gray-200 text-5xl">Loading...</div>
-    <table v-else class="min-w-full table-auto text-sm">
+    <table v-else class="min-w-full table-auto text-sm max-h-[100%]">
       <thead>
         <tr class="bg-gray-100 dark:bg-ucs-900 text-left text-gray-700 dark:text-white">
           <th class="px-4 py-3">SN</th>
@@ -15,16 +16,6 @@
         </tr>
       </thead>
       <tbody>
-        <!-- <tr v-for="(user, index) in users" :key="user.id || index"
-          :class="[rowColor(index), 'text-gray-600 dark:text-gray-200']">
-          <td class="px-2 py-1 md:py-2">{{ index + 1 }}</td>
-          <td class="px-2 py-1 md:py-2">{{ user.firstName }}</td>
-          <td class="px-2 py-1 md:py-2">{{ user.middleName }}</td>
-          <td class="px-2 py-1 md:py-2">{{ user.lastName }}</td>
-          <td class="px-2 py-1 md:py-2">{{ user.username }}</td>
-          <td class="px-2 py-1 md:py-2">{{ user.facility }}</td>
-          <td class="px-2 py-1 md:py-2">{{ user.council }}</td>
-        </tr> -->
         <tr v-for="(user, index) in users" :key="user.id || index"
           :class="index % 2 === 0 ? 'bg-ucs-100 dark:bg-ucs-700' : 'bg-white dark:bg-gray-800'">
           <td class="px-2 py-1 md:py-2">{{ index + 1 }}</td>

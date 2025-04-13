@@ -22,7 +22,7 @@
         <span
           class="flex flex-row items-center justify-start font-semibold text-white dark:text-ucs-300 cursor-pointer hover:text-ucs-100 transition-colors p-2"
           @click="logout">
-          Logouti
+          Logout
         </span>
       </div>
     </div>
