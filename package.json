@@ -17,6 +17,7 @@
     "@vueuse/core": "^13.0.0",
     "axios": "^1.8.2",
     "chart.js": "^4.4.8",
+    "date-fns": "^4.1.0",
     "dotenv": "^16.4.7",
     "pinia": "^3.0.1",
     "primeicons": "^7.0.0",

@@ -20,7 +20,8 @@
 
     <!-- Table Data -->
     <DataTable :value="filteredUsers" paginator :rows="pageSize" :rowsPerPageOptions="[5, 10, 20, 50]" :lazy="true"
-      :totalRecords="totalRecords" @page="onPageChange" :loading="loading" tableStyle="min-width: 50rem" stripedRows>
+      :totalRecords="totalRecords" @page="onPageChange" :loading="loading" tableStyle="min-width: 50rem" stripedRows
+      @rowSelect="onRowClick" selectionMode="single">
       <template #header>
         <div class="flex justify-between items-center">
           <span class="text-lg font-semibold">{{ systemTitle }} Users</span>
@@ -44,6 +45,7 @@
         <div class="text-center text-gray-500">No users found.</div>
       </template>
     </DataTable>
+    <UserDetailsDialog v-model="showDialog" :userUuid="selectedUser || null" />
   </div>
 </template>
 
@@ -58,6 +60,7 @@ import PageTitle from "@/components/layout/PageTitle.vue";
 import ApiClient from "@/utilities/ApiClient";
 import { useAuthStore } from "@/stores/auth";
 import { useToast } from "primevue";
+import UserDetailsDialog from "@/components/dialogs/UserDetailsDialog.vue";
 
 const authStore = useAuthStore();
 const apiClient = new ApiClient(authStore.accessToken);
@@ -118,6 +121,9 @@ const systems = ref([
   { name: "DHIS2", code: "dhis2" },
   { name: "Manager", code: "manager" },
 ]);
+
+const showDialog = ref(false);
+const selectedUser = ref(null);
 
 async function fetchUsers(systemCode: string) {
   loading.value = true;
@@ -180,6 +186,11 @@ async function fetchUsers(systemCode: string) {
   }
 }
 
+function onRowClick(event: { data: any }) {
+  selectedUser.value = event.data.uuid;
+  showDialog.value = true;
+}
+
 function navigateToAddUser() {
   if (selectedSystem.value) {
     router.push(`/adduser/${selectedSystem.value.code}`);
@@ -189,7 +200,7 @@ function navigateToAddUser() {
 function onPageChange(event: { page: number; rows: number }) {
   page.value = event.page;
   pageSize.value = event.rows;
-  fetchUsers(systemTitle.value.toLowerCase());
+  fetchUsers('openmrs');
 }
 
 function roleColor(role: string | null) {
@@ -211,5 +222,8 @@ function roleColor(role: string | null) {
   }
 }
 
-onMounted(() => fetchUsers("openmrs"));
+onMounted(() => {
+  systemTitle.value = "OpenMRS"
+  fetchUsers("openmrs")
+})
 </script>
