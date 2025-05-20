@@ -62,7 +62,8 @@
         <AutoComplete v-model="selectedFacility" :suggestions="facilitySuggestions" @complete="searchFacilities"
           placeholder="Search facility by name" class="w-full" optionLabel="name" forceSelection inputClass="w-full"
           size="large">
-          <template #item="{ item }: any">
+          <!-- @vue-ignore -->
+          <template #item="{ item }">
             {{ item.name }}
           </template>
         </AutoComplete>
@@ -118,8 +119,12 @@ onMounted(async () => {
   try {
     await apiClient.get('/auth/me')
 
+    // const teamRolesResponse = await apiClient.get('/openmrs/teamrole')
+    // teamRoles.value = teamRolesResponse.data.data || []
+
     const teamRolesResponse = await apiClient.get('/openmrs/teamrole')
-    teamRoles.value = teamRolesResponse.data.data || []
+    const typedData = teamRolesResponse.data as { data: Array<{ uuid: string; name: string }> }
+    teamRoles.value = typedData.data || []
 
   } catch (error) {
     if ((error as any).response?.status === 401) {
@@ -191,7 +196,7 @@ const form = ref({
   firstName: '',
   middleName: '',
   lastName: '',
-  NIN: null,
+  NIN: '',
   sex: '',
   email: '',
   birthdate: null,
@@ -200,7 +205,7 @@ const form = ref({
   hfrCode: '',
   locationCode: '',
   selectedRole: '',
-  username: null,
+  username: '',
 })
 
 const sexOptions = [
@@ -219,7 +224,8 @@ const formatPhoneNumber = () => {
 
 
 const validateNIN = () => {
-  const nin = form.value.NIN.replace(/\D/g, '')
+  // const nin = form.value.NIN.replace(/\D/g, '')
+  const nin = form.value.NIN?.replace(/\D/g, '') || ''
   if (nin.length < 8) {
     alert("NIN is invalid.")
     return false
@@ -258,7 +264,9 @@ watch(() => form.value.phoneNumber, async (newPhoneNumber) => {
 const checkUsernameAvailability = async (username: string): Promise<boolean> => {
   try {
     const { data } = await apiClient.get(`/openmrs/teammember/username/search?username=${username}`)
-    return data?.data?.isAvailable === true
+    // return data?.data?.isAvailable === true
+    const typedData = data as { data: { isAvailable: boolean } }
+    return typedData.data?.isAvailable === true
   } catch (error) {
     console.error('Error checking username:', error)
     return false
@@ -321,7 +329,21 @@ const submitForm = async () => {
     const response = await apiClient.post(`/user/chw`, form.value)
     form.value.rawPhoneNumber = ''
     form.value.phoneNumber = ''
-    form.value = ''
+    Object.assign(form.value, {
+      firstName: '',
+      middleName: '',
+      lastName: '',
+      NIN: '',
+      sex: '',
+      email: '',
+      birthdate: null,
+      phoneNumber: '',
+      rawPhoneNumber: '',
+      hfrCode: '',
+      locationCode: '',
+      selectedRole: '',
+      username: '',
+    })
 
     toast.add({
       severity: 'success',
