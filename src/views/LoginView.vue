@@ -1,6 +1,6 @@
 <template>
   <div id="login-box"
-    class="flex lg:flex flex-row bg-white dark:bg-gray-800 shadow-lg lg:rounded-lg lg:m-20 lg:h-[75vh] md:h-[100vh] h-[100vh] lg:min-h-180 lg:min-w-200">
+    class="flex lg:flex flex-row bg-white dark:bg-gray-800 shadow-lg lg:rounded-lg lg:m-20 lg:mt-40 lg:h-[65vh] md:h-[100vh] h-[100vh] lg:min-h-160 lg:min-w-180">
     <div id="box-left" class="flex w-full lg:w-1/2 md:w-2/3 lg:flex flex-col md:h-[90%] mt-4 sm:mt-10">
       <div id="left-bottom" class="box-border lg:h-3/4 sm:h-[90vh] flex flex-row justify-center">
         <div id="bottom-form" class="lg:w-3/5 md:w-4/5 flex flex-col justify-center">

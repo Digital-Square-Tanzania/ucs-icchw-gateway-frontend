@@ -1,6 +1,13 @@
-<!-- src/views/AddUserView.vue -->
 <template>
   <PageTitle heading="Add New User" :subtext="'Add new ' + system.toUpperCase() + ' user'" />
+
+  <!-- Select member role -->
+  <div class="flex flex-col grid-4 items-center justify-between mb-4">
+    <!-- <label for="teamRole">Select Team Role</label> -->
+    <SelectButton id="teamRole" v-model="form.selectedRole"
+      :options="teamRoles.map(role => ({ label: role.name, value: role.uuid }))" optionLabel="label" optionValue="value"
+      class="" />
+  </div>
 
   <div id="table-bg" class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4">
     <form @submit.prevent="submitForm" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10 gap-y-20">
@@ -19,12 +26,11 @@
         <InputText id="lastName" v-model="form.lastName" class="w-full" required size="large" />
       </div>
 
-      <div>
+      <div v-if="form.selectedRole === icchwRoleUuid">
         <label for="nin">NIN</label>
         <InputMask id="nin" v-model="form.NIN" class="w-full" required mask="99999999-99999-99999-99"
           placeholder="e.g. 19981027-12345-00001-12" size="large" />
-        <Message size="small" severity="secondary" variant="simple">Do not add dashes.
-        </Message>
+        <Message size="small" severity="secondary" variant="simple">Do not add dashes.</Message>
       </div>
 
       <div>
@@ -40,10 +46,15 @@
 
       <div>
         <label for="phone">Phone Number</label>
-        <InputMask id="phone" v-model="form.phoneNumber" class="w-full" required mask="(0999) 999999"
-          placeholder="(0755) 437887" size="large" />
-        <Message size="small" severity="secondary" variant="simple">Do not add the leading 0.
+        <InputMask id="phone" v-model="form.rawPhoneNumber" class="w-full" mask="(0999) 999999"
+          placeholder="(0755) 437887" size="large" @blur="handlePhoneBlur" />
+        <Message v-if="phoneTaken" severity="error" size="small" class="mt-1">
+          This phone number is already in use.
         </Message>
+
+        <Message v-else size="small" severity="secondary" variant="simple">Do not add the leading 0. This will be the
+          CHW
+          username</Message>
       </div>
 
       <div>
@@ -51,7 +62,6 @@
         <AutoComplete v-model="selectedFacility" :suggestions="facilitySuggestions" @complete="searchFacilities"
           placeholder="Search facility by name" class="w-full" optionLabel="name" forceSelection inputClass="w-full"
           size="large">
-          <!-- @vue-ignore -->
           <template #item="{ item }: any">
             {{ item.name }}
           </template>
@@ -60,14 +70,8 @@
 
       <div>
         <label for="location">Location Code</label>
-        <AutoComplete v-model="selectedLocation" :suggestions="locationSuggestions" @complete="searchLocations"
-          placeholder="Search location by name" class="w-full" optionLabel="name" forceSelection inputClass="w-full"
-          size="large">
-          <!-- @vue-expect-error -->
-          <template #item="{ item }: { item: Location }">
-            {{ item.name }} - {{ item.locationCode }}
-          </template>
-        </AutoComplete>
+        <Select v-model="form.locationCode" :options="locationOptions" optionLabel="name" optionValue="locationCode"
+          placeholder="Select location" class="w-full" size="large" :disabled="locationOptions.length === 0" />
       </div>
 
       <div class="md:col-span-2 lg:col-span-3 text-right">
@@ -80,7 +84,7 @@
 <script setup lang="ts">
 import PageTitle from '@/components/layout/PageTitle.vue'
 import { onMounted, ref, watch } from 'vue'
-import { InputText, Select, Button, InputMask, Message } from 'primevue'
+import { InputText, Select, Button, InputMask, Message, SelectButton } from 'primevue'
 import AutoComplete from 'primevue/autocomplete'
 import ApiClient from '@/utilities/ApiClient'
 import { useAuthStore } from '@/stores/auth'
@@ -90,6 +94,7 @@ import { useRouter } from 'vue-router'
 interface Facility {
   name: string
   hfrCode: string
+  parent: string
 }
 
 interface Location {
@@ -98,19 +103,26 @@ interface Location {
 }
 
 const facilitySuggestions = ref<Facility[]>([])
-const locationSuggestions = ref<Location[]>([])
+const locationOptions = ref<Array<{ name: string; locationCode: string }>>([])
 const authStore = useAuthStore()
 const accessToken = authStore.accessToken
 const apiClient = new ApiClient(accessToken)
 const toast = useToast()
 const router = useRouter()
 
-// Check if the user is authenticated
+const teamRoles = ref<Array<{ uuid: string; name: string }>>([])
+const icchwRoleUuid = import.meta.env.VITE_OPENMRS_ICCHW_TEAM_ROLE_UUID
+const phoneTaken = ref(false)
+
 onMounted(async () => {
   try {
     await apiClient.get('/auth/me')
+
+    const teamRolesResponse = await apiClient.get('/openmrs/teamrole')
+    teamRoles.value = teamRolesResponse.data.data || []
+
   } catch (error) {
-    if ((error as any).response && (error as any).response.status === 401) {
+    if ((error as any).response?.status === 401) {
       authStore.logout(router, toast)
       router.push({ name: 'Login' })
     } else {
@@ -120,9 +132,26 @@ onMounted(async () => {
 })
 
 const selectedFacility = ref<Facility | null>(null)
-watch(selectedFacility, (val) => {
-  if (val?.hfrCode) {
-    form.value.hfrCode = val.hfrCode;
+watch(selectedFacility, async (val) => {
+  if (!val || !val.hfrCode || !val.parent) return
+
+  form.value.hfrCode = val.hfrCode
+  form.value.locationCode = '' // Clear previous location selection
+  locationOptions.value = []
+
+  try {
+    const { data } = await apiClient.get(`/openmrs/location/facilities/hamlets/search?q=${val.parent}`)
+    const typedData = data as { status: string; data: Array<{ name: string; locationCode: string }> }
+
+    if (typedData.status === 'success') {
+      locationOptions.value = typedData.data.map(loc => ({
+        name: `${loc.name} - ${loc.locationCode}`,
+        locationCode: loc.locationCode
+      }))
+    }
+  } catch (error) {
+    console.error('Error fetching locations:', error)
+    locationOptions.value = []
   }
 })
 
@@ -132,52 +161,22 @@ const searchFacilities = async (event: any) => {
 
   try {
     const { data } = await apiClient.get(`/openmrs/location/facilities/search?q=${query}`)
-    const typedData = data as { status: string; data: Array<{ hfrCode?: string; name?: string }> }
-    if (typedData.status === 'success' && Array.isArray(typedData.data)) {
-      facilitySuggestions.value = typedData.data
-        .filter(facility => facility.name && facility.hfrCode)
-        .map(facility => ({
-          name: facility.name as string,
-          hfrCode: facility.hfrCode as string
-        }))
+    const typedData = data as { status: string; data: Array<{ hfrCode?: string; name?: string; parent?: string }> }
 
+    if (typedData.status === 'success') {
+      facilitySuggestions.value = typedData.data
+        .filter(f => f.name && f.hfrCode && f.parent)
+        .map(f => ({
+          name: f.name!,
+          hfrCode: f.hfrCode!,
+          parent: f.parent!
+        }))
     } else {
       facilitySuggestions.value = []
     }
   } catch (error) {
     console.error('Error fetching facilities:', error)
     facilitySuggestions.value = []
-  }
-}
-
-const selectedLocation = ref<Location | null>(null)
-watch(selectedLocation, (val) => {
-  if (val?.locationCode) {
-    form.value.locationCode = val.locationCode;
-  }
-})
-
-const searchLocations = async (event: any) => {
-  const query = event.query
-  if (query.length < 4) return
-
-  try {
-    const { data } = await apiClient.get(`/openmrs/location/hamlets/search?q=${query}`)
-    const typedData = data as { status: string; data: Array<{ locationCode?: string; name?: string }> }
-    if (typedData.status === 'success' && Array.isArray(typedData.data)) {
-      locationSuggestions.value = typedData.data
-        .filter(location => location.name && location.locationCode)
-        .map(location => ({
-          name: location.name as string,
-          locationCode: location.locationCode as string
-        }))
-
-    } else {
-      locationSuggestions.value = []
-    }
-  } catch (error) {
-    console.error('Error fetching facilities:', error)
-    locationSuggestions.value = []
   }
 }
 
@@ -192,13 +191,16 @@ const form = ref({
   firstName: '',
   middleName: '',
   lastName: '',
-  NIN: '',
+  NIN: null,
   sex: '',
   email: '',
   birthdate: null,
   phoneNumber: '',
+  rawPhoneNumber: '',
   hfrCode: '',
-  locationCode: ''
+  locationCode: '',
+  selectedRole: '',
+  username: null,
 })
 
 const sexOptions = [
@@ -206,69 +208,121 @@ const sexOptions = [
   { label: 'Female', value: 'FEMALE' }
 ]
 
-// Format phone number to international format
 const formatPhoneNumber = () => {
-  if (!form.value.phoneNumber) return
+  if (!form.value.rawPhoneNumber) return
 
-  const raw = form.value.phoneNumber.replace(/\D/g, '') // (0755) 437887 => 0755437887
-
+  const raw = form.value.rawPhoneNumber.replace(/\D/g, '')
   if (/^0\d{9}$/.test(raw)) {
     form.value.phoneNumber = '+255' + raw.slice(1)
-  } else {
-    alert('Please enter a valid phone number like (0755) 437887')
-    form.value.phoneNumber = ''
   }
 }
 
-// Validate NIN format
-const validateNIN = () => {
-  const nin = form.value.NIN.replace(/\D/g, ''); // remove non-digits
 
+const validateNIN = () => {
+  const nin = form.value.NIN.replace(/\D/g, '')
   if (nin.length < 8) {
-    alert("NIN is invalid.");
-    return false;
+    alert("NIN is invalid.")
+    return false
   }
 
-  const year = parseInt(nin.slice(0, 4), 10);
-  const month = parseInt(nin.slice(4, 6), 10);
-  const day = parseInt(nin.slice(6, 8), 10);
+  const year = parseInt(nin.slice(0, 4), 10)
+  const month = parseInt(nin.slice(4, 6), 10)
+  const day = parseInt(nin.slice(6, 8), 10)
+  const now = new Date()
 
-  const currentYear = new Date().getFullYear();
-
-  const isYearValid = year >= 1900 && year <= currentYear;
-  const isMonthValid = month >= 1 && month <= 12;
-  const isDayValid = day >= 1 && day <= 31;
-
-  if (!isYearValid || !isMonthValid || !isDayValid) {
+  if (year < 1900 || year > now.getFullYear() || month < 1 || month > 12 || day < 1 || day > 31) {
     toast.add({
       severity: 'error',
       summary: 'Invalid NIN',
       detail: 'Check NIN, birthdate is not valid',
       life: 3000,
     })
-    return false;
+    return false
+  }
+  return true
+}
+
+// Watch for changes in the phone number to check if it's taken
+watch(() => form.value.phoneNumber, async (newPhoneNumber) => {
+  if (!newPhoneNumber) return
+
+  const raw = newPhoneNumber.replace(/\D/g, '')
+  if (/^0\d{9}$/.test(raw)) {
+    const formattedPhone = '+255' + raw.slice(1)
+    phoneTaken.value = await checkUsernameAvailability(formattedPhone)
+  } else {
+    phoneTaken.value = false
+  }
+})
+// Check if the username is available
+const checkUsernameAvailability = async (username: string): Promise<boolean> => {
+  try {
+    const { data } = await apiClient.get(`/openmrs/teammember/username/search?username=${username}`)
+    return data?.data?.isAvailable === true
+  } catch (error) {
+    console.error('Error checking username:', error)
+    return false
+  }
+}
+
+// Handle phone number blur event
+const handlePhoneBlur = async () => {
+  if (!form.value.rawPhoneNumber) return
+
+  const raw = form.value.rawPhoneNumber.replace(/\D/g, '') // extract digits
+
+  if (/^0\d{9}$/.test(raw)) {
+    form.value.phoneNumber = '+255' + raw.slice(1)
+  } else {
+    form.value.phoneNumber = ''
+    phoneTaken.value = false
+    return
   }
 
-  return true;
-};
+  const isAvailable = await checkUsernameAvailability(raw)
+  phoneTaken.value = !isAvailable
 
-// Submit form
+  if (!isAvailable) {
+    toast.add({
+      severity: 'warn',
+      summary: 'Phone already used',
+      detail: 'This phone number is already registered',
+      life: 3000
+    })
+  }
+}
+
+// Handle role-based form submission
 const submitForm = async () => {
   authStore.loading = true
   formatPhoneNumber()
-  if (!form.value.phoneNumber) {
+  if (form.value.selectedRole === icchwRoleUuid && !form.value.phoneNumber) {
     authStore.loading = false
     return
   }
 
-  if (!validateNIN()) {
+  if (form.value.selectedRole === icchwRoleUuid && !validateNIN()) {
+    authStore.loading = false
+    return
+  }
+
+  if (phoneTaken.value) {
+    toast.add({
+      severity: 'error',
+      summary: 'Cannot Submit',
+      detail: 'Phone number already taken. Enter a different one.',
+      life: 3000
+    })
     authStore.loading = false
     return
   }
 
   try {
     const response = await apiClient.post(`/user/chw`, form.value)
-    console.log('✅ User added:', response.data)
+    form.value.rawPhoneNumber = ''
+    form.value.phoneNumber = ''
+    form.value = ''
+
     toast.add({
       severity: 'success',
       summary: 'User added',
@@ -277,8 +331,6 @@ const submitForm = async () => {
     })
   } catch (error: any) {
     const errorMessage = typeof error === 'string' ? error : error.message
-    console.error('❌ Error adding user:', errorMessage)
-    // Show error toast
     toast.add({
       severity: 'error',
       summary: 'Failed to add user',
@@ -289,5 +341,4 @@ const submitForm = async () => {
     authStore.loading = false
   }
 }
-
 </script>
