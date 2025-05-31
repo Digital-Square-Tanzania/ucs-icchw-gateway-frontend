@@ -93,6 +93,7 @@ const openmrsColumns = ref([
   { field: "roleName", header: "Role" },
   { field: "teamName", header: "Team Name" },
   { field: "locationName", header: "Facility" },
+  { field: "createdAt", header: "Created At" },
 ]);
 
 const dhis2Columns = ref([
