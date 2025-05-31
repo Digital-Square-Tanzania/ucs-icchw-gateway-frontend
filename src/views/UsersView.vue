@@ -35,6 +35,10 @@
             class="text-xs px-2 py-0.5 rounded-md">
             {{ slotProps.data.roleName || "UNKNOWN" }}
           </span>
+          <span v-else-if="col.field === 'teamName'"
+            class="text-xs px-2 py-0.5 rounded-md bg-white-200 dark:bg-gray-700">
+            {{ slotProps.data.teamName || "UNKNOWN" }}
+          </span>
           <span v-else>
             {{ slotProps.data[col.field] || "UNKNOWN" }}
           </span>
@@ -93,7 +97,7 @@ const openmrsColumns = ref([
   { field: "roleName", header: "Role" },
   { field: "teamName", header: "Team Name" },
   { field: "locationName", header: "Facility" },
-  { field: "createdAt", header: "Created At" },
+  { field: "createdAt", header: "Deployed On" },
 ]);
 
 const dhis2Columns = ref([
