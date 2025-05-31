@@ -39,6 +39,10 @@
             class="text-xs px-2 py-0.5 rounded-md bg-white-200 dark:bg-gray-700">
             {{ slotProps.data.teamName || "UNKNOWN" }}
           </span>
+          <span v-else-if="col.field === 'locationName'"
+            class="text-xs px-2 py-0.5 rounded-md bg-white-100 dark:bg-black-500">
+            {{ slotProps.data.teamName || "UNKNOWN" }}
+          </span>
           <span v-else>
             {{ slotProps.data[col.field] || "UNKNOWN" }}
           </span>
