@@ -170,7 +170,18 @@ async function fetchUsers(systemCode: string) {
     } else {
       users.value = response.data.data.users || [];
     }
-
+    users.value = (response.data.data.users || []).map((user) => {
+      if (user.createdAt) {
+        const dt = new Date(user.createdAt);
+        const yyyy = dt.getFullYear();
+        const mm = String(dt.getMonth() + 1).padStart(2, "0");
+        const dd = String(dt.getDate()).padStart(2, "0");
+        const hh = String(dt.getHours()).padStart(2, "0");
+        const min = String(dt.getMinutes()).padStart(2, "0");
+        return { ...user, createdAt: `${yyyy}-${mm}-${dd} ${hh}:${min}` };
+      }
+      return user;
+    });
     filteredUsers.value = users.value;
     totalRecords.value = response.data.data.total || 0;
   } catch (error) {
