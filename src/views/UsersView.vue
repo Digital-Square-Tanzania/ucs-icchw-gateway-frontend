@@ -6,7 +6,7 @@
     <div id="table-top" class="flex flex-row justify-between px-4">
       <!-- Filter buttons -->
       <div id="filter-buttons" class="mb-4 flex gap-2">
-        <button v-for="system in systems" :key="system.code" @click="fetchUsers(system.code)"
+        <button v-for="system in systems" :key="system.code" @click="selectSystem(system.code)"
           class="py-2 px-4 bg-ucs-300 dark:bg-ucs-600 text-ucs-50 dark:text-ucs-200 rounded-sm cursor-pointer hover:bg-ucs-400 dark:hover:bg-ucs-700 focus:cursor-not-allowed focus:bg-ucs-100 dark:focus:bg-ucs-900 focus:outline-none">
           {{ system.name }}
         </button>
@@ -19,7 +19,8 @@
     </div>
 
     <!-- Table Data -->
-    <DataTable :value="filteredUsers" paginator :rows="pageSize" :rowsPerPageOptions="[5, 10, 20, 50]" :lazy="true"
+    <DataTable :value="filteredUsers" paginator :rows="pageSize" :first="page * pageSize"
+      :rowsPerPageOptions="[5, 10, 20, 50]" :lazy="true"
       :totalRecords="totalRecords" @page="onPageChange" :loading="loading" tableStyle="min-width: 50rem" stripedRows
       @rowSelect="onRowClick" selectionMode="single">
       <template #header>
@@ -59,7 +60,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from "vue";
-import { useRouter } from "vue-router";
+import { useRouter, useRoute } from "vue-router";
 import DataTable from "primevue/datatable";
 import Column from "primevue/column";
 import Select from "primevue/select";
@@ -91,7 +92,10 @@ const page = ref<number>(0);
 const pageSize = ref<number>(10);
 const totalRecords = ref<number>(0);
 const router = useRouter();
+const route = useRoute();
 const systemTitle = ref<string>("UCS");
+const currentSystem = ref<string>("openmrs");
+const shouldJumpToLastPage = ref<boolean>(false);
 
 const openmrsColumns = ref([
   { field: "username", header: "Username" },
@@ -134,17 +138,19 @@ const systems = ref([
 const showDialog = ref(false);
 const selectedUser = ref(null);
 
-async function fetchUsers(systemCode: string) {
+async function fetchUsers(systemCode?: string) {
   loading.value = true;
-  systemTitle.value = systems.value.find((s) => s.code === systemCode)?.name || "UCS";
+  const activeSystem = systemCode ?? currentSystem.value ?? "openmrs";
+  currentSystem.value = activeSystem;
+  systemTitle.value = systems.value.find((s) => s.code === activeSystem)?.name || "UCS";
 
   let url = "/openmrs/teammember";
   let columnMapping = openmrsColumns.value;
 
-  if (systemCode === "dhis2") {
+  if (activeSystem === "dhis2") {
     url = "/dhis2/user";
     columnMapping = dhis2Columns.value;
-  } else if (systemCode === "manager") {
+  } else if (activeSystem === "manager") {
     url = "/user";
     columnMapping = managerColumns.value;
   }
@@ -156,7 +162,7 @@ async function fetchUsers(systemCode: string) {
       params: { page: page.value + 1, pageSize: pageSize.value },
     });
 
-    if (systemCode === "dhis2") {
+    if (activeSystem === "dhis2") {
       users.value = response.data.data.users?.map((user) => ({
         username: user.username,
         firstName: user.firstName,
@@ -166,7 +172,7 @@ async function fetchUsers(systemCode: string) {
         councilName: user.councilName,
         email: user.email || "N/A",
       })) || [];
-    } else if (systemCode === "manager") {
+    } else if (activeSystem === "manager") {
       users.value = response.data.data.users?.map((user) => ({
         email: user.email,
         firstName: user.firstName,
@@ -206,6 +212,56 @@ async function fetchUsers(systemCode: string) {
   }
 }
 
+function selectSystem(systemCode: string) {
+  if (systemCode !== currentSystem.value) {
+    page.value = 0;
+  }
+  fetchUsers(systemCode);
+}
+
+function resolveQueryValue(value: unknown): string | null {
+  if (Array.isArray(value)) {
+    return value[0] ?? null;
+  }
+  return typeof value === "string" ? value : null;
+}
+
+function applyRoutePreferences() {
+  const systemFromQuery = resolveQueryValue(route.query.system);
+  if (systemFromQuery && systems.value.some((s) => s.code === systemFromQuery)) {
+    currentSystem.value = systemFromQuery;
+  } else {
+    currentSystem.value = "openmrs";
+  }
+
+  const pageQuery = resolveQueryValue(route.query.page);
+  shouldJumpToLastPage.value = pageQuery === "last";
+}
+
+async function goToLastPage() {
+  if (!totalRecords.value) {
+    shouldJumpToLastPage.value = false;
+    return;
+  }
+
+  const lastPageIndex = Math.max(Math.ceil(totalRecords.value / pageSize.value) - 1, 0);
+  if (lastPageIndex === page.value) {
+    shouldJumpToLastPage.value = false;
+    return;
+  }
+
+  page.value = lastPageIndex;
+  await fetchUsers();
+  shouldJumpToLastPage.value = false;
+}
+
+function clearPageQuery() {
+  if (!route.query.page) return;
+  const newQuery: Record<string, any> = { ...route.query };
+  delete newQuery.page;
+  router.replace({ name: "Users", query: newQuery });
+}
+
 function onRowClick(event: { data: any }) {
   selectedUser.value = event.data.uuid;
   showDialog.value = true;
@@ -220,7 +276,7 @@ function navigateToAddUser() {
 function onPageChange(event: { page: number; rows: number }) {
   page.value = event.page;
   pageSize.value = event.rows;
-  fetchUsers('openmrs');
+  fetchUsers();
 }
 
 function roleColor(role: string | null) {
@@ -242,8 +298,13 @@ function roleColor(role: string | null) {
   }
 }
 
-onMounted(() => {
-  systemTitle.value = "OpenMRS"
-  fetchUsers("openmrs")
-})
+onMounted(async () => {
+  applyRoutePreferences();
+  await fetchUsers(currentSystem.value);
+
+  if (shouldJumpToLastPage.value) {
+    await goToLastPage();
+    clearPageQuery();
+  }
+});
 </script>

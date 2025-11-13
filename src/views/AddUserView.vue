@@ -351,6 +351,9 @@ const submitForm = async () => {
       detail: 'User successfully added',
       life: 2000,
     })
+
+    const redirectSystem = typeof props.system === 'string' ? props.system.toLowerCase() : 'openmrs'
+    await router.push({ name: 'Users', query: { system: redirectSystem, page: 'last' } })
   } catch (error: any) {
     const errorMessage = typeof error === 'string' ? error : error.message
     toast.add({
