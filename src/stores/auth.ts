@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
 import ApiClient from '@/utilities/ApiClient'
 import { canAccessSettings, isUcsDeveloper } from '@/constants/roles'
+import { getRoleFromToken } from '@/utilities/jwt'
 
 const API_URL = import.meta.env.VITE_API_URL
 
@@ -27,9 +28,13 @@ export const useAuthStore = defineStore('auth', {
   }),
   getters: {
     isAuthenticated: (state) => !!state.accessToken,
-    userRole: (state) => state.user?.role ?? null,
-    canAccessSettings: (state) => canAccessSettings(state.user?.role),
-    isUcsDeveloper: (state) => isUcsDeveloper(state.user?.role),
+    // Prefer the fetched profile role; fall back to the role claim in the JWT
+    // so UI gating works without depending on the /auth/me round-trip.
+    userRole: (state) => state.user?.role ?? getRoleFromToken(state.accessToken),
+    canAccessSettings: (state) =>
+      canAccessSettings(state.user?.role ?? getRoleFromToken(state.accessToken)),
+    isUcsDeveloper: (state) =>
+      isUcsDeveloper(state.user?.role ?? getRoleFromToken(state.accessToken)),
     apiClient: (state) => new ApiClient(state.accessToken),
   },
   actions: {
