@@ -2,16 +2,20 @@ import { fileURLToPath, URL } from 'node:url'
 
 import { defineConfig, type PluginOption } from 'vite'
 import vue from '@vitejs/plugin-vue'
-import vueDevTools from 'vite-plugin-vue-devtools'
 import tailwindcss from '@tailwindcss/vite'
 import dotenv from 'dotenv'
 dotenv.config()
 
 // https://vite.dev/config/
-export default defineConfig(({ command }) => {
+export default defineConfig(async ({ command }) => {
   const plugins: PluginOption[] = [vue(), tailwindcss()]
 
+  // Load vue-devtools only for the dev server. It is imported dynamically so
+  // @vue/devtools-kit (which touches localStorage at import time) is never
+  // evaluated during `build`, where some Node versions expose a partial
+  // localStorage global and crash config loading.
   if (command === 'serve') {
+    const { default: vueDevTools } = await import('vite-plugin-vue-devtools')
     const devtoolsPlugin = vueDevTools()
     if (Array.isArray(devtoolsPlugin)) {
       plugins.push(...devtoolsPlugin)
