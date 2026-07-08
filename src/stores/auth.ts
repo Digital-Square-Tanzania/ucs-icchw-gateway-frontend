@@ -3,18 +3,33 @@ import { AxiosError } from 'axios'
 import { useRouter } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
 import ApiClient from '@/utilities/ApiClient'
+import { canAccessSettings, isUcsDeveloper } from '@/constants/roles'
 
 const API_URL = import.meta.env.VITE_API_URL
+
+export interface AuthUser {
+  id: string
+  firstName: string
+  lastName: string
+  email: string
+  role: string
+  joinDate?: string
+  lastLogin?: string
+}
 
 export const useAuthStore = defineStore('auth', {
   state: () => ({
     accessToken: localStorage.getItem('accessToken') || '',
     refreshToken: localStorage.getItem('refreshToken') || '',
+    user: null as AuthUser | null,
     loading: false,
     error: '' as string | null,
   }),
   getters: {
     isAuthenticated: (state) => !!state.accessToken,
+    userRole: (state) => state.user?.role ?? null,
+    canAccessSettings: (state) => canAccessSettings(state.user?.role),
+    isUcsDeveloper: (state) => isUcsDeveloper(state.user?.role),
     apiClient: (state) => new ApiClient(state.accessToken),
   },
   actions: {
@@ -49,6 +64,8 @@ export const useAuthStore = defineStore('auth', {
 
         if (this.accessToken) localStorage.setItem('accessToken', this.accessToken)
         if (this.refreshToken) localStorage.setItem('refreshToken', this.refreshToken)
+
+        await this.fetchProfile()
 
         // Show success toast
         toast.add({
@@ -97,9 +114,29 @@ export const useAuthStore = defineStore('auth', {
       }
     },
 
+    async fetchProfile() {
+      if (!this.accessToken) {
+        this.user = null
+        return
+      }
+      try {
+        interface ProfileResponse {
+          status: string
+          data: AuthUser
+        }
+        const response = await this.apiClient.get<ProfileResponse>(`${API_URL}/auth/me`)
+        if (response.data.status === 'success' && response.data.data) {
+          this.user = response.data.data
+        }
+      } catch {
+        this.user = null
+      }
+    },
+
     clearTokens() {
       this.accessToken = ''
       this.refreshToken = ''
+      this.user = null
       localStorage.removeItem('accessToken')
       localStorage.removeItem('refreshToken')
     },

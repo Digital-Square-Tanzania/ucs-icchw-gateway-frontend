@@ -17,6 +17,7 @@
       <div id="links-area" class="p-5">
         <MainLink route="/dashboard" title="Dashboard" />
         <MainLink route="/users" title="Users" />
+        <MainLink v-if="auth.canAccessSettings" route="/settings" title="Settings" />
       </div>
       <div id="user-area" class="p-4 tracking-wider w-1/4">
         <span
@@ -44,11 +45,17 @@ import { useRouter, useRoute, RouterView } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useToast } from 'primevue/usetoast'
 import Toast from 'primevue/toast'
-import { watch } from 'vue'
+import { onMounted, watch } from 'vue'
 import MainLink from './components/layout/MainLink.vue'
 import TransparentCover from './components/layout/TransparentCover.vue'
 
 const auth = useAuthStore()
+
+onMounted(() => {
+  if (auth.isAuthenticated && !auth.user) {
+    auth.fetchProfile()
+  }
+})
 const router = useRouter()
 const toast = useToast()
 const route = useRoute()
