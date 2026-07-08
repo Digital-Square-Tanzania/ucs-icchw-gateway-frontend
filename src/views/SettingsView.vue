@@ -2,33 +2,7 @@
   <PageTitle heading="Settings" subtext="Admin tools for activation emails, data sync, and developer operations" />
 
   <div class="flex flex-col gap-8">
-    <!-- Email & Activation -->
-    <section>
-      <h2 class="text-lg font-semibold text-ucs-700 dark:text-ucs-200 mb-3">Email &amp; Activation</h2>
-      <div class="grid gap-4 lg:grid-cols-2">
-        <article
-          class="rounded-xl border border-gray-200 dark:border-ucs-800 bg-white dark:bg-ucs-900/40 p-5 shadow-sm">
-          <h3 class="text-base font-semibold text-gray-900 dark:text-white">CHW Activation Email Management</h3>
-          <p class="mt-2 text-sm text-gray-600 dark:text-gray-300">
-            Monitor activation slug metrics, resend email batches by council, configure the nightly scheduler, and
-            review council member activation status.
-          </p>
-          <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">
-            Opens the admin control dashboard (same session as this manager when cookies are shared with the API).
-          </p>
-          <a
-            :href="activationUrl"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="mt-4 inline-flex items-center gap-2 rounded-lg bg-ucs-500 px-4 py-2 text-sm font-medium text-white hover:bg-ucs-600 transition-colors">
-            Open Activation Dashboard
-            <span aria-hidden="true">↗</span>
-          </a>
-        </article>
-      </div>
-    </section>
-
-    <!-- Data Sync -->
+    <!-- Data Sync (top) -->
     <section>
       <h2 class="text-lg font-semibold text-ucs-700 dark:text-ucs-200 mb-3">Data Sync</h2>
       <p class="text-sm text-gray-600 dark:text-gray-300 mb-4">
@@ -57,6 +31,27 @@
           </p>
         </article>
       </div>
+    </section>
+
+    <!-- Email & Activation (below sync, rendered inline) -->
+    <section>
+      <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+        <div>
+          <h2 class="text-lg font-semibold text-ucs-700 dark:text-ucs-200">Email &amp; Activation</h2>
+          <p class="text-sm text-gray-600 dark:text-gray-300">
+            CHW activation metrics, batch resends, council filters, and the nightly scheduler — all inline below.
+          </p>
+        </div>
+        <a
+          :href="activationUrl"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="inline-flex items-center gap-1 rounded-lg border border-gray-300 dark:border-ucs-700 px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-ucs-200 hover:bg-gray-100 dark:hover:bg-ucs-800 transition-colors">
+          Legacy page
+          <span aria-hidden="true">↗</span>
+        </a>
+      </div>
+      <ActivationEmailPanel />
     </section>
 
     <!-- Advanced (Developer only) -->
@@ -98,6 +93,7 @@
 import { onMounted, onUnmounted, reactive, watch } from 'vue'
 import { useToast } from 'primevue/usetoast'
 import PageTitle from '@/components/layout/PageTitle.vue'
+import ActivationEmailPanel from '@/components/settings/ActivationEmailPanel.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useSyncStore } from '@/stores/sync'
 import { activationEmailControlUrl } from '@/utilities/backend-url'
