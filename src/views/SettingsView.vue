@@ -54,6 +54,53 @@
       <ActivationEmailPanel />
     </section>
 
+    <!-- Maintenance -->
+    <section>
+      <h2 class="text-lg font-semibold text-ucs-700 dark:text-ucs-200 mb-1">Maintenance</h2>
+      <p class="text-sm text-gray-600 dark:text-gray-300 mb-4">
+        Clean up local records left behind when OpenMRS registration was rolled back.
+      </p>
+      <div class="grid gap-4 lg:grid-cols-2">
+        <article
+          class="rounded-xl border border-gray-200 dark:border-ucs-800 bg-white dark:bg-ucs-900/40 p-5 shadow-sm">
+          <h3 class="text-base font-semibold text-gray-900 dark:text-white">
+            Remove Orphaned Local CHW Records
+          </h3>
+          <p class="mt-2 text-sm text-gray-600 dark:text-gray-300">
+            Scan <code class="text-xs">openmrs_team_members</code> and delete rows (plus related activations,
+            username counters, and person attributes) whose OpenMRS team-member UUID no longer exists. Safe for
+            retrying failed HRHIS registrations.
+          </p>
+          <button
+            type="button"
+            :disabled="orphanStatus === 'running'"
+            class="mt-4 rounded-lg bg-ucs-500 px-4 py-2 text-sm font-medium text-white hover:bg-ucs-600 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+            @click="runOrphanPurge">
+            {{ orphanStatus === 'running' ? 'Scanning &amp; purging…' : 'Purge Orphaned Records' }}
+          </button>
+          <p v-if="orphanMessage" class="mt-2 text-xs" :class="orphanMessageClass">
+            {{ orphanMessage }}
+          </p>
+          <ul
+            v-if="orphanStats"
+            class="mt-3 grid grid-cols-2 gap-2 text-xs text-gray-700 dark:text-gray-300 sm:grid-cols-4">
+            <li class="rounded-md bg-gray-50 dark:bg-ucs-950/60 px-2 py-1.5">
+              Scanned: <strong>{{ orphanStats.scanned }}</strong>
+            </li>
+            <li class="rounded-md bg-gray-50 dark:bg-ucs-950/60 px-2 py-1.5">
+              Kept: <strong>{{ orphanStats.kept }}</strong>
+            </li>
+            <li class="rounded-md bg-gray-50 dark:bg-ucs-950/60 px-2 py-1.5">
+              Purged: <strong>{{ orphanStats.purged }}</strong>
+            </li>
+            <li class="rounded-md bg-gray-50 dark:bg-ucs-950/60 px-2 py-1.5">
+              Errors: <strong>{{ orphanStats.errors }}</strong>
+            </li>
+          </ul>
+        </article>
+      </div>
+    </section>
+
     <!-- Advanced (Developer only) -->
     <section v-if="auth.isUcsDeveloper">
       <h2 class="text-lg font-semibold text-ucs-700 dark:text-ucs-200 mb-1">Advanced</h2>
@@ -90,7 +137,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, onUnmounted, reactive, watch } from 'vue'
+import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { useToast } from 'primevue/usetoast'
 import PageTitle from '@/components/layout/PageTitle.vue'
 import ActivationEmailPanel from '@/components/settings/ActivationEmailPanel.vue'
@@ -105,6 +152,25 @@ const toast = useToast()
 const { syncStatus, lastSynced } = storeToRefs(syncStore)
 
 const activationUrl = activationEmailControlUrl()
+
+interface OrphanPurgeStats {
+  scanned: number
+  kept: number
+  purged: number
+  errors: number
+  purgedSamples?: Array<{ nin?: string | null; openMrsUuid?: string | null; username?: string | null }>
+  errorSamples?: Array<{ nin?: string | null; message?: string }>
+}
+
+const orphanStatus = ref<'idle' | 'running' | 'success' | 'error'>('idle')
+const orphanMessage = ref('')
+const orphanStats = ref<OrphanPurgeStats | null>(null)
+
+const orphanMessageClass = computed(() => {
+  if (orphanStatus.value === 'success') return 'text-green-700 dark:text-green-300'
+  if (orphanStatus.value === 'error') return 'text-red-700 dark:text-red-300'
+  return 'text-gray-600 dark:text-gray-300'
+})
 
 const syncItems = [
   {
@@ -219,6 +285,39 @@ async function runDashboardSync(path: SyncPath) {
     const message = error instanceof Error ? error.message : String(error)
     syncMessages[path] = message
     toast.add({ severity: 'error', summary: 'Sync failed', detail: message, life: 5000 })
+  }
+}
+
+async function runOrphanPurge() {
+  orphanStatus.value = 'running'
+  orphanMessage.value = ''
+  orphanStats.value = null
+  try {
+    const response = await auth.apiClient.post<{
+      status?: string
+      message?: string
+      data?: OrphanPurgeStats
+    }>('/openmrs/teammember/purge-orphans', {})
+
+    const stats = response.data?.data ?? null
+    orphanStats.value = stats
+    orphanStatus.value = 'success'
+    const msg =
+      response.data?.message ||
+      (stats
+        ? `Completed: scanned ${stats.scanned}, kept ${stats.kept}, purged ${stats.purged}, errors ${stats.errors}.`
+        : 'Orphan purge completed.')
+    orphanMessage.value = msg
+    toast.add({ severity: 'success', summary: 'Orphan purge', detail: msg, life: 6000 })
+  } catch (error: unknown) {
+    orphanStatus.value = 'error'
+    const message =
+      typeof error === 'string'
+        ? error
+        : (error as { response?: { data?: { message?: string } } })?.response?.data?.message ||
+          (error instanceof Error ? error.message : String(error))
+    orphanMessage.value = message
+    toast.add({ severity: 'error', summary: 'Orphan purge failed', detail: message, life: 6000 })
   }
 }
 
