@@ -29,8 +29,8 @@ ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, T
 export interface HrhisBucket {
   day: string
   incoming: number
-  created: number
-  updated: number
+  succeeded: number
+  failed: number
 }
 
 const props = withDefaults(
@@ -64,8 +64,8 @@ const chartData = computed(() => ({
       borderWidth: 2,
     },
     {
-      label: 'Successfully registered',
-      data: props.buckets.map((b) => b.created),
+      label: 'Succeeded',
+      data: props.buckets.map((b) => b.succeeded),
       borderColor: '#16a34a',
       backgroundColor: 'rgba(22, 163, 74, 0.08)',
       fill: true,
@@ -74,9 +74,9 @@ const chartData = computed(() => ({
       borderWidth: 2,
     },
     {
-      label: 'Updated existing',
-      data: props.buckets.map((b) => b.updated),
-      borderColor: '#d97706',
+      label: 'Failed',
+      data: props.buckets.map((b) => b.failed),
+      borderColor: '#dc2626',
       backgroundColor: 'transparent',
       fill: false,
       tension: 0.3,

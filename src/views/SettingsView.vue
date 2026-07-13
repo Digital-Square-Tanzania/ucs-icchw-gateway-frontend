@@ -8,7 +8,8 @@
         <div>
           <h2 class="text-lg font-semibold text-ucs-700 dark:text-ucs-200">HRHIS Registrations</h2>
           <p class="text-sm text-gray-600 dark:text-gray-300">
-            Incoming register requests from HRHIS, with successful new accounts and existing-NIN updates overlaid.
+            Incoming HRHIS register requests from <code class="text-xs">api_logs</code>, with succeeded vs failed
+            responses overlaid.
           </p>
         </div>
         <select
@@ -27,10 +28,10 @@
             Incoming: <strong>{{ hrhisTotals.incoming }}</strong>
           </span>
           <span class="rounded-md bg-gray-50 dark:bg-ucs-950/60 px-2 py-1.5">
-            Registered: <strong>{{ hrhisTotals.created }}</strong>
+            Succeeded: <strong>{{ hrhisTotals.succeeded }}</strong>
           </span>
           <span class="rounded-md bg-gray-50 dark:bg-ucs-950/60 px-2 py-1.5">
-            Updated: <strong>{{ hrhisTotals.updated }}</strong>
+            Failed: <strong>{{ hrhisTotals.failed }}</strong>
           </span>
         </div>
         <p v-if="hrhisLoading" class="text-sm text-gray-500 dark:text-gray-400">Loading chart…</p>
@@ -193,7 +194,7 @@ const activationUrl = activationEmailControlUrl()
 
 const hrhisDays = ref(30)
 const hrhisBuckets = ref<HrhisBucket[]>([])
-const hrhisTotals = reactive({ incoming: 0, created: 0, updated: 0 })
+const hrhisTotals = reactive({ incoming: 0, succeeded: 0, failed: 0 })
 const hrhisLoading = ref(false)
 const hrhisError = ref('')
 
@@ -204,20 +205,20 @@ async function loadHrhisTimeseries() {
     const response = await auth.apiClient.get<{
       data?: {
         buckets?: HrhisBucket[]
-        totals?: { incoming?: number; created?: number; updated?: number }
+        totals?: { incoming?: number; succeeded?: number; failed?: number }
       }
     }>(`/dashboard/hrhis-register-timeseries?days=${hrhisDays.value}`)
 
     const data = response.data?.data
     hrhisBuckets.value = data?.buckets ?? []
     hrhisTotals.incoming = data?.totals?.incoming ?? 0
-    hrhisTotals.created = data?.totals?.created ?? 0
-    hrhisTotals.updated = data?.totals?.updated ?? 0
+    hrhisTotals.succeeded = data?.totals?.succeeded ?? 0
+    hrhisTotals.failed = data?.totals?.failed ?? 0
   } catch (error: unknown) {
     hrhisBuckets.value = []
     hrhisTotals.incoming = 0
-    hrhisTotals.created = 0
-    hrhisTotals.updated = 0
+    hrhisTotals.succeeded = 0
+    hrhisTotals.failed = 0
     hrhisError.value =
       (error as { response?: { data?: { message?: string } } })?.response?.data?.message ||
       (error instanceof Error ? error.message : 'Failed to load HRHIS registration chart.')
