@@ -2,6 +2,43 @@
   <PageTitle heading="Settings" subtext="Admin tools for activation emails, data sync, and developer operations" />
 
   <div class="flex flex-col gap-8">
+    <!-- HRHIS registration activity -->
+    <section>
+      <div class="flex flex-wrap items-start justify-between gap-3 mb-3">
+        <div>
+          <h2 class="text-lg font-semibold text-ucs-700 dark:text-ucs-200">HRHIS Registrations</h2>
+          <p class="text-sm text-gray-600 dark:text-gray-300">
+            Incoming register requests from HRHIS, with successful new accounts and existing-NIN updates overlaid.
+          </p>
+        </div>
+        <select
+          v-model.number="hrhisDays"
+          class="rounded-lg border border-gray-300 dark:border-ucs-700 bg-white dark:bg-ucs-900 px-3 py-1.5 text-sm text-gray-700 dark:text-ucs-200"
+          @change="loadHrhisTimeseries">
+          <option :value="7">Last 7 days</option>
+          <option :value="30">Last 30 days</option>
+          <option :value="60">Last 60 days</option>
+          <option :value="90">Last 90 days</option>
+        </select>
+      </div>
+      <article class="rounded-xl border border-gray-200 dark:border-ucs-800 bg-white dark:bg-ucs-900/40 p-5 shadow-sm">
+        <div class="mb-4 flex flex-wrap gap-3 text-xs text-gray-700 dark:text-gray-300">
+          <span class="rounded-md bg-gray-50 dark:bg-ucs-950/60 px-2 py-1.5">
+            Incoming: <strong>{{ hrhisTotals.incoming }}</strong>
+          </span>
+          <span class="rounded-md bg-gray-50 dark:bg-ucs-950/60 px-2 py-1.5">
+            Registered: <strong>{{ hrhisTotals.created }}</strong>
+          </span>
+          <span class="rounded-md bg-gray-50 dark:bg-ucs-950/60 px-2 py-1.5">
+            Updated: <strong>{{ hrhisTotals.updated }}</strong>
+          </span>
+        </div>
+        <p v-if="hrhisLoading" class="text-sm text-gray-500 dark:text-gray-400">Loading chart…</p>
+        <p v-else-if="hrhisError" class="text-sm text-red-600 dark:text-red-400">{{ hrhisError }}</p>
+        <HrhisRegisterChart v-else :buckets="hrhisBuckets" />
+      </article>
+    </section>
+
     <!-- Data Sync (top) -->
     <section>
       <h2 class="text-lg font-semibold text-ucs-700 dark:text-ucs-200 mb-3">Data Sync</h2>
@@ -141,6 +178,7 @@ import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { useToast } from 'primevue/usetoast'
 import PageTitle from '@/components/layout/PageTitle.vue'
 import ActivationEmailPanel from '@/components/settings/ActivationEmailPanel.vue'
+import HrhisRegisterChart, { type HrhisBucket } from '@/components/settings/HrhisRegisterChart.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useSyncStore } from '@/stores/sync'
 import { activationEmailControlUrl } from '@/utilities/backend-url'
@@ -152,6 +190,41 @@ const toast = useToast()
 const { syncStatus, lastSynced } = storeToRefs(syncStore)
 
 const activationUrl = activationEmailControlUrl()
+
+const hrhisDays = ref(30)
+const hrhisBuckets = ref<HrhisBucket[]>([])
+const hrhisTotals = reactive({ incoming: 0, created: 0, updated: 0 })
+const hrhisLoading = ref(false)
+const hrhisError = ref('')
+
+async function loadHrhisTimeseries() {
+  hrhisLoading.value = true
+  hrhisError.value = ''
+  try {
+    const response = await auth.apiClient.get<{
+      data?: {
+        buckets?: HrhisBucket[]
+        totals?: { incoming?: number; created?: number; updated?: number }
+      }
+    }>(`/dashboard/hrhis-register-timeseries?days=${hrhisDays.value}`)
+
+    const data = response.data?.data
+    hrhisBuckets.value = data?.buckets ?? []
+    hrhisTotals.incoming = data?.totals?.incoming ?? 0
+    hrhisTotals.created = data?.totals?.created ?? 0
+    hrhisTotals.updated = data?.totals?.updated ?? 0
+  } catch (error: unknown) {
+    hrhisBuckets.value = []
+    hrhisTotals.incoming = 0
+    hrhisTotals.created = 0
+    hrhisTotals.updated = 0
+    hrhisError.value =
+      (error as { response?: { data?: { message?: string } } })?.response?.data?.message ||
+      (error instanceof Error ? error.message : 'Failed to load HRHIS registration chart.')
+  } finally {
+    hrhisLoading.value = false
+  }
+}
 
 interface OrphanPurgeStats {
   scanned: number
@@ -349,6 +422,7 @@ async function runDevTool(tool: DevTool) {
 
 onMounted(() => {
   syncStore.initWebSocket()
+  loadHrhisTimeseries()
 })
 
 watch(
