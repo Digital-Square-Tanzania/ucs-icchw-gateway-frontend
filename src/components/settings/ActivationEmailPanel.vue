@@ -162,17 +162,30 @@
       </button>
     </div>
 
-    <!-- Activity matrix -->
+    <!-- Activity matrix (activation slugs only — not HRHIS register volume) -->
     <div v-if="matrix.length" class="rounded-xl border border-gray-200 dark:border-ucs-800 bg-white dark:bg-ucs-900/40 p-4">
       <h3 class="text-sm font-semibold text-gray-900 dark:text-white mb-1">Recent activation activity</h3>
-      <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">Activation slugs created per day (last {{ matrixDays }} days).</p>
-      <div class="flex flex-wrap gap-1">
-        <div
+      <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">
+        Activation email slugs created per day (last {{ matrixDays }} days). Hover a square for the date and count.
+        For HRHIS register volume vs successful accounts, see the <strong>HRHIS Registrations</strong> chart at the top of Settings.
+      </p>
+      <div class="relative flex flex-wrap gap-1">
+        <button
           v-for="cell in matrix"
           :key="cell.date"
-          :title="`${cell.date}: ${cell.count}`"
-          class="h-4 w-4 rounded-sm"
-          :style="{ backgroundColor: cellColor(cell.count) }"></div>
+          type="button"
+          class="h-4 w-4 rounded-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ucs-500"
+          :style="{ backgroundColor: cellColor(cell.count) }"
+          :aria-label="matrixTooltip(cell)"
+          @mouseenter="matrixHover = cell"
+          @mouseleave="matrixHover = null"
+          @focus="matrixHover = cell"
+          @blur="matrixHover = null"></button>
+        <div
+          v-if="matrixHover"
+          class="pointer-events-none absolute -top-8 left-0 z-10 rounded-md bg-gray-900 px-2 py-1 text-[0.7rem] text-white shadow-md dark:bg-gray-100 dark:text-gray-900">
+          {{ matrixTooltip(matrixHover) }}
+        </div>
       </div>
     </div>
   </div>
@@ -231,6 +244,7 @@ const savingSchedule = ref(false)
 
 const matrix = ref<MatrixCell[]>([])
 const matrixDays = ref(90)
+const matrixHover = ref<MatrixCell | null>(null)
 
 const expiredLimit = ref(100)
 const openLimit = ref(100)
@@ -417,6 +431,11 @@ function cellColor(count: number): string {
   const max = Math.max(...matrix.value.map((m) => m.count), 1)
   const intensity = Math.min(1, 0.2 + (count / max) * 0.8)
   return `rgba(33,140,197,${intensity.toFixed(2)})`
+}
+
+function matrixTooltip(cell: MatrixCell): string {
+  const countLabel = cell.count === 1 ? '1 slug' : `${cell.count} slugs`
+  return `${cell.date}: ${countLabel}`
 }
 
 function notifyError(summary: string, error: unknown) {
