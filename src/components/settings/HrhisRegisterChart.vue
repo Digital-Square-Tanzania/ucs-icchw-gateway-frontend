@@ -31,6 +31,7 @@ export interface HrhisBucket {
   incoming: number
   succeeded: number
   failed: number
+  recovered: number
 }
 
 const props = withDefaults(
@@ -74,7 +75,7 @@ const chartData = computed(() => ({
       borderWidth: 2,
     },
     {
-      label: 'Failed',
+      label: 'Failed (open)',
       data: props.buckets.map((b) => b.failed),
       borderColor: '#dc2626',
       backgroundColor: 'transparent',
@@ -83,6 +84,17 @@ const chartData = computed(() => ({
       pointRadius: 2,
       borderWidth: 2,
       borderDash: [4, 3],
+    },
+    {
+      label: 'Recovered (retry)',
+      data: props.buckets.map((b) => b.recovered ?? 0),
+      borderColor: '#d97706',
+      backgroundColor: 'rgba(217, 119, 6, 0.08)',
+      fill: false,
+      tension: 0.3,
+      pointRadius: 2,
+      borderWidth: 2,
+      borderDash: [2, 2],
     },
   ],
 }))
