@@ -96,7 +96,8 @@
     <section>
       <h2 class="text-lg font-semibold text-ucs-700 dark:text-ucs-200 mb-1">Maintenance</h2>
       <p class="text-sm text-gray-600 dark:text-gray-300 mb-4">
-        Clean up local records left behind when OpenMRS registration was rolled back.
+        Clean up local records left behind when OpenMRS registration was rolled back, and recover HRHIS
+        registrations that failed on location lookup.
       </p>
       <div class="grid gap-4 lg:grid-cols-2">
         <article
@@ -136,6 +137,10 @@
             </li>
           </ul>
         </article>
+      </div>
+
+      <div class="mt-4">
+        <HrhisLocationRecoveryPanel />
       </div>
     </section>
 
@@ -180,6 +185,7 @@ import { useToast } from 'primevue/usetoast'
 import PageTitle from '@/components/layout/PageTitle.vue'
 import ActivationEmailPanel from '@/components/settings/ActivationEmailPanel.vue'
 import HrhisRegisterChart, { type HrhisBucket } from '@/components/settings/HrhisRegisterChart.vue'
+import HrhisLocationRecoveryPanel from '@/components/settings/HrhisLocationRecoveryPanel.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useSyncStore } from '@/stores/sync'
 import { activationEmailControlUrl } from '@/utilities/backend-url'
