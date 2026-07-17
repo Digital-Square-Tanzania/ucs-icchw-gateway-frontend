@@ -82,6 +82,12 @@
       <span class="rounded-md bg-gray-50 dark:bg-ucs-950/60 px-2 py-1.5">
         Eligible: <strong>{{ scanMeta.count }}</strong>
       </span>
+      <span
+        v-if="scanMeta.debug"
+        class="rounded-md bg-gray-50 dark:bg-ucs-950/60 px-2 py-1.5"
+        :title="prefixHint">
+        Before council filter: <strong>{{ scanMeta.debug.locationFailuresBeforeCouncilFilter }}</strong>
+      </span>
       <span v-if="recoverSummary" class="rounded-md bg-gray-50 dark:bg-ucs-950/60 px-2 py-1.5">
         Recovered: <strong>{{ recoverSummary.recovered }}</strong>
       </span>
@@ -92,6 +98,9 @@
         Skipped: <strong>{{ recoverSummary.skipped }}</strong>
       </span>
     </div>
+    <p v-if="prefixHint" class="mt-2 text-[0.7rem] text-gray-500 dark:text-gray-400 font-mono break-all">
+      {{ prefixHint }}
+    </p>
 
     <div v-if="failures.length" class="mt-4 overflow-x-auto rounded-lg border border-gray-200 dark:border-ucs-800">
       <table class="min-w-full text-left text-xs text-gray-700 dark:text-gray-300">
@@ -174,6 +183,11 @@ interface ScanResult {
   failures: FailureRow[]
   councilPrefixes?: string[]
   days?: number
+  debug?: {
+    locationFailuresBeforeCouncilFilter?: number
+    afterCouncilPrefixFilter?: number
+    afterNinDedupe?: number
+  }
 }
 
 interface RecoverResult {
@@ -208,6 +222,12 @@ const messageClass = computed(() => {
   if (messageTone.value === 'success') return 'text-green-700 dark:text-green-300'
   if (messageTone.value === 'error') return 'text-red-700 dark:text-red-300'
   return 'text-gray-600 dark:text-gray-300'
+})
+
+const prefixHint = computed(() => {
+  const prefixes = scanMeta.value?.councilPrefixes
+  if (!prefixes?.length) return ''
+  return `Matching locationCode prefixes: ${prefixes.join(', ')}`
 })
 
 function eachRegion(fn: (region: Region) => void) {
