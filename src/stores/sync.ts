@@ -3,10 +3,29 @@ import { ref } from 'vue'
 import ApiClient from '@/utilities/ApiClient'
 import { useAuthStore } from './auth'
 
+export interface HrhisRecoveryProgress {
+  jobId?: string
+  status?: 'running' | 'complete' | 'error'
+  total: number
+  completed: number
+  recovered: number
+  skipped: number
+  stillFailed: number
+  message?: string
+  current?: {
+    id?: number
+    NIN?: string | null
+    status?: string
+    message?: string
+  } | null
+}
+
 export const useSyncStore = defineStore('syncStore', () => {
   const syncStatus = ref<Record<string, 'unsynced' | 'syncing' | 'synced'>>({})
   const lastSynced = ref<Record<string, string>>({})
+  const hrhisRecovery = ref<HrhisRecoveryProgress | null>(null)
   let socket: WebSocket | null = null
+  const recoveryListeners = new Set<(event: HrhisRecoveryProgress & { type: string }) => void>()
 
   const startSync = async (path: string) => {
     const authStore = useAuthStore()
@@ -35,12 +54,43 @@ export const useSyncStore = defineStore('syncStore', () => {
     socket = new WebSocket(wsUrl)
 
     socket.addEventListener('message', (event) => {
-      const data = JSON.parse(event.data)
+      let data: Record<string, unknown>
+      try {
+        data = JSON.parse(event.data)
+      } catch {
+        return
+      }
+
       if (data.type === 'sync-complete' && data.path) {
-        console.log(`Sync complete for ${data.path}`)
-        syncStatus.value[data.path] = 'synced'
-        lastSynced.value[data.path] = new Date().toLocaleDateString()
+        const path = String(data.path)
+        console.log(`Sync complete for ${path}`)
+        syncStatus.value[path] = 'synced'
+        lastSynced.value[path] = new Date().toLocaleDateString()
         if (onSyncComplete) onSyncComplete()
+        return
+      }
+
+      if (data.type === 'hrhis-recovery-progress' || data.type === 'hrhis-recovery-complete') {
+        const progress: HrhisRecoveryProgress = {
+          jobId: data.jobId ? String(data.jobId) : undefined,
+          status:
+            data.type === 'hrhis-recovery-complete'
+              ? data.status === 'error'
+                ? 'error'
+                : 'complete'
+              : 'running',
+          total: Number(data.total) || 0,
+          completed: Number(data.completed) || Number(data.attempted) || 0,
+          recovered: Number(data.recovered) || 0,
+          skipped: Number(data.skipped) || 0,
+          stillFailed: Number(data.stillFailed) || 0,
+          message: data.message ? String(data.message) : undefined,
+          current: (data.current as HrhisRecoveryProgress['current']) ?? null,
+        }
+        hrhisRecovery.value = progress
+        for (const listener of recoveryListeners) {
+          listener({ ...progress, type: String(data.type) })
+        }
       }
     })
 
@@ -54,18 +104,31 @@ export const useSyncStore = defineStore('syncStore', () => {
     })
   }
 
+  const onHrhisRecoveryEvent = (listener: (event: HrhisRecoveryProgress & { type: string }) => void) => {
+    recoveryListeners.add(listener)
+    return () => recoveryListeners.delete(listener)
+  }
+
+  const clearHrhisRecovery = () => {
+    hrhisRecovery.value = null
+  }
+
   const cleanupWebSocket = () => {
     if (socket) {
       socket.close()
-      socket = null
     }
+    socket = null
+    recoveryListeners.clear()
   }
 
   return {
     syncStatus,
     lastSynced,
+    hrhisRecovery,
     startSync,
     initWebSocket,
+    onHrhisRecoveryEvent,
+    clearHrhisRecovery,
     cleanupWebSocket,
   }
 })

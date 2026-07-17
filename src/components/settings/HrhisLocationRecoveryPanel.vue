@@ -78,6 +78,38 @@
 
     <p v-if="message" class="mt-3 text-xs" :class="messageClass">{{ message }}</p>
 
+    <div
+      v-if="batchProgress"
+      class="mt-3 rounded-lg border border-ucs-200 dark:border-ucs-800 bg-ucs-50/80 dark:bg-ucs-950/40 p-3">
+      <div class="flex flex-wrap items-center justify-between gap-2 text-xs text-gray-700 dark:text-gray-300">
+        <span>
+          Recovering
+          <strong>{{ batchProgress.completed }}</strong>
+          /
+          <strong>{{ batchProgress.total }}</strong>
+        </span>
+        <span>
+          OK {{ batchProgress.recovered }} · Failed {{ batchProgress.stillFailed }} · Skipped
+          {{ batchProgress.skipped }}
+        </span>
+      </div>
+      <div class="mt-2 h-2 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-ucs-800">
+        <div
+          class="h-full rounded-full bg-ucs-500 transition-all duration-300"
+          :style="{ width: `${batchProgressPercent}%` }" />
+      </div>
+      <p
+        v-if="batchProgress.current"
+        class="mt-2 truncate text-[0.7rem] text-gray-500 dark:text-gray-400"
+        :title="batchProgress.current.message || ''">
+        Last:
+        {{ batchProgress.current.NIN || `log #${batchProgress.current.id}` }}
+        —
+        {{ batchProgress.current.status }}
+        <span v-if="batchProgress.current.message"> ({{ batchProgress.current.message }})</span>
+      </p>
+    </div>
+
     <div v-if="scanMeta" class="mt-3 flex flex-wrap gap-2 text-xs text-gray-700 dark:text-gray-300">
       <span class="rounded-md bg-gray-50 dark:bg-ucs-950/60 px-2 py-1.5">
         Eligible: <strong>{{ scanMeta.count }}</strong>
@@ -143,9 +175,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useToast } from 'primevue/usetoast'
 import { useAuthStore } from '@/stores/auth'
+import { useSyncStore, type HrhisRecoveryProgress } from '@/stores/sync'
 
 interface ApiEnvelope<T> {
   status?: string
@@ -206,9 +239,12 @@ interface RecoverResult {
   skipped: number
   attempted: number
   checked: number
+  started?: boolean
+  jobId?: string
 }
 
 const auth = useAuthStore()
+const syncStore = useSyncStore()
 const toast = useToast()
 
 const hierarchy = ref<Hierarchy>({})
@@ -228,8 +264,18 @@ const messageTone = ref<'idle' | 'success' | 'error'>('idle')
 const failures = ref<FailureRow[]>([])
 const scanMeta = ref<ScanResult | null>(null)
 const recoverSummary = ref<RecoverResult | null>(null)
+const batchProgress = ref<HrhisRecoveryProgress | null>(null)
+const activeJobId = ref<string | null>(null)
+
+let unsubscribeRecovery: (() => void) | null = null
 
 const recovering = computed(() => recoveringAll.value || recoveringId.value != null)
+
+const batchProgressPercent = computed(() => {
+  const p = batchProgress.value
+  if (!p?.total) return 0
+  return Math.min(100, Math.round((p.completed / p.total) * 100))
+})
 
 const messageClass = computed(() => {
   if (messageTone.value === 'success') return 'text-green-700 dark:text-green-300'
@@ -268,6 +314,8 @@ function clearScan() {
   recoverSummary.value = null
   recoveringId.value = null
   recoveringAll.value = false
+  batchProgress.value = null
+  activeJobId.value = null
   message.value = ''
   messageTone.value = 'idle'
 }
@@ -360,36 +408,116 @@ async function runScan() {
   }
 }
 
-async function runRecover(logIds: number[], label = 'HRHIS recovery') {
-  if (!logIds.length || !selectedCouncil.value) return
+async function runRecoverSync(logIds: number[], label = 'HRHIS recovery') {
+  const res = await auth.apiClient.post<ApiEnvelope<RecoverResult>>(
+    '/gateway/admin/hrhis-location-failures/recover',
+    {
+      region: selectedRegion.value,
+      district: selectedDistrict.value,
+      council: selectedCouncil.value,
+      days: days.value,
+      logIds,
+      async: false,
+    },
+  )
+  const data = res.data?.data
+  recoverSummary.value = data ?? null
+  message.value =
+    res.data?.message ||
+    `Recovery finished: ${data?.recovered ?? 0} recovered, ${data?.stillFailed ?? 0} still failed.`
+  messageTone.value = (data?.stillFailed ?? 0) > 0 ? 'error' : 'success'
+  toast.add({
+    severity: (data?.stillFailed ?? 0) > 0 ? 'warn' : 'success',
+    summary: label,
+    detail: message.value,
+    life: 6000,
+  })
 
-  message.value = ''
+  const preserved = recoverSummary.value
+  const preservedMessage = message.value
+  const preservedTone = messageTone.value
+  await runScan()
+  recoverSummary.value = preserved
+  message.value = preservedMessage
+  messageTone.value = preservedTone
+}
+
+function waitForRecoveryJob(jobIdRef: { current: string | null }): Promise<HrhisRecoveryProgress> {
+  return new Promise((resolve, reject) => {
+    let unsubscribe: (() => boolean) | null = null
+    const timeoutMs = 30 * 60 * 1000
+    const timer = window.setTimeout(() => {
+      unsubscribe?.()
+      reject(new Error('Recovery job timed out waiting for WebSocket completion.'))
+    }, timeoutMs)
+
+    unsubscribe = syncStore.onHrhisRecoveryEvent((event) => {
+      if (jobIdRef.current && event.jobId && event.jobId !== jobIdRef.current) return
+      batchProgress.value = event
+      if (event.type === 'hrhis-recovery-complete') {
+        if (jobIdRef.current && event.jobId && event.jobId !== jobIdRef.current) return
+        window.clearTimeout(timer)
+        unsubscribe?.()
+        if (event.status === 'error') {
+          reject(new Error(event.message || 'Recovery job failed.'))
+        } else {
+          resolve(event)
+        }
+      }
+    })
+  })
+}
+
+async function runRecoverAll() {
+  if (!failures.value.length || recovering.value || !selectedCouncil.value) return
+  recoveringAll.value = true
+  batchProgress.value = {
+    status: 'running',
+    total: failures.value.length,
+    completed: 0,
+    recovered: 0,
+    skipped: 0,
+    stillFailed: 0,
+  }
+  message.value = 'Recovery started in the background…'
   messageTone.value = 'idle'
+  const jobIdRef: { current: string | null } = { current: null }
   try {
-    const res = await auth.apiClient.post<ApiEnvelope<RecoverResult>>(
+    syncStore.initWebSocket()
+    const completion = waitForRecoveryJob(jobIdRef)
+    const res = await auth.apiClient.post<ApiEnvelope<{ started?: boolean; jobId?: string }>>(
       '/gateway/admin/hrhis-location-failures/recover',
       {
         region: selectedRegion.value,
         district: selectedDistrict.value,
         council: selectedCouncil.value,
         days: days.value,
-        logIds,
+        logIds: failures.value.map((f) => f.id),
+        async: true,
       },
     )
-    const data = res.data?.data
-    recoverSummary.value = data ?? null
-    message.value =
-      res.data?.message ||
-      `Recovery finished: ${data?.recovered ?? 0} recovered, ${data?.stillFailed ?? 0} still failed.`
-    messageTone.value = (data?.stillFailed ?? 0) > 0 ? 'error' : 'success'
+    const jobId = res.data?.data?.jobId
+    if (!jobId) {
+      throw new Error(res.data?.message || 'Recovery job did not return a jobId.')
+    }
+    jobIdRef.current = jobId
+    activeJobId.value = jobId
+    const finalProgress = await completion
+    recoverSummary.value = {
+      recovered: finalProgress.recovered,
+      stillFailed: finalProgress.stillFailed,
+      skipped: finalProgress.skipped,
+      attempted: finalProgress.completed,
+      checked: scanMeta.value?.count ?? 0,
+    }
+    message.value = `Recovery finished: ${finalProgress.recovered} recovered, ${finalProgress.stillFailed} still failed, ${finalProgress.skipped} skipped.`
+    messageTone.value = finalProgress.stillFailed > 0 ? 'error' : 'success'
     toast.add({
-      severity: (data?.stillFailed ?? 0) > 0 ? 'warn' : 'success',
-      summary: label,
+      severity: finalProgress.stillFailed > 0 ? 'warn' : 'success',
+      summary: 'Recover all',
       detail: message.value,
       life: 6000,
     })
-
-    // Refresh the eligible list without wiping the recovery totals we just showed.
     const preserved = recoverSummary.value
     const preservedMessage = message.value
     const preservedTone = messageTone.value
@@ -403,28 +531,32 @@ async function runRecover(logIds: number[], label = 'HRHIS recovery') {
       (typeof error === 'string' ? error : error instanceof Error ? error.message : 'Recovery failed.')
     message.value = msg
     messageTone.value = 'error'
-    toast.add({ severity: 'error', summary: label, detail: msg, life: 6000 })
-  }
-}
-
-async function runRecoverAll() {
-  if (!failures.value.length || recovering.value) return
-  recoveringAll.value = true
-  try {
-    await runRecover(
-      failures.value.map((f) => f.id),
-      'Recover all',
-    )
+    toast.add({ severity: 'error', summary: 'Recover all', detail: msg, life: 6000 })
   } finally {
     recoveringAll.value = false
+    activeJobId.value = null
   }
 }
 
 async function runRecoverOne(row: FailureRow) {
-  if (!row?.id || recovering.value) return
+  if (!row?.id || recovering.value || !selectedCouncil.value) return
   recoveringId.value = row.id
+  message.value = ''
+  messageTone.value = 'idle'
   try {
-    await runRecover([row.id], `Recover ${row.NIN || `log #${row.id}`}`)
+    await runRecoverSync([row.id], `Recover ${row.NIN || `log #${row.id}`}`)
+  } catch (error: unknown) {
+    const msg =
+      (error as { response?: { data?: { message?: string } } })?.response?.data?.message ||
+      (typeof error === 'string' ? error : error instanceof Error ? error.message : 'Recovery failed.')
+    message.value = msg
+    messageTone.value = 'error'
+    toast.add({
+      severity: 'error',
+      summary: `Recover ${row.NIN || `log #${row.id}`}`,
+      detail: msg,
+      life: 6000,
+    })
   } finally {
     recoveringId.value = null
   }
@@ -432,5 +564,15 @@ async function runRecoverOne(row: FailureRow) {
 
 onMounted(() => {
   loadHierarchy()
+  syncStore.initWebSocket()
+  unsubscribeRecovery = syncStore.onHrhisRecoveryEvent((event) => {
+    if (activeJobId.value && event.jobId && event.jobId !== activeJobId.value) return
+    if (recoveringAll.value) batchProgress.value = event
+  })
+})
+
+onUnmounted(() => {
+  unsubscribeRecovery?.()
+  unsubscribeRecovery = null
 })
 </script>
