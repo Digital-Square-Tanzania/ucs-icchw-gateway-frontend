@@ -70,8 +70,8 @@
           type="button"
           :disabled="!failures.length || recovering"
           class="rounded-lg border border-ucs-500 bg-ucs-50 px-4 py-2 text-sm font-medium text-ucs-800 hover:bg-ucs-100 dark:border-ucs-600 dark:bg-ucs-950/50 dark:text-ucs-100 dark:hover:bg-ucs-950 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          @click="runRecover">
-          {{ recovering ? 'Recovering…' : `Recover all (${failures.length})` }}
+          @click="runRecoverAll">
+          {{ recoveringAll ? 'Recovering…' : `Recover all (${failures.length})` }}
         </button>
       </div>
     </div>
@@ -111,6 +111,7 @@
             <th class="px-3 py-2 font-semibold">Name</th>
             <th class="px-3 py-2 font-semibold">Location code</th>
             <th class="px-3 py-2 font-semibold">Error</th>
+            <th class="px-3 py-2 font-semibold text-right">Action</th>
           </tr>
         </thead>
         <tbody>
@@ -124,6 +125,15 @@
             <td class="px-3 py-2 font-mono">{{ row.locationCode }}</td>
             <td class="px-3 py-2 max-w-xs truncate" :title="row.errorMessage || ''">
               {{ row.errorMessage || '—' }}
+            </td>
+            <td class="px-3 py-2 text-right whitespace-nowrap">
+              <button
+                type="button"
+                :disabled="recovering"
+                class="rounded-md border border-ucs-500 bg-white px-2.5 py-1 text-xs font-medium text-ucs-800 hover:bg-ucs-50 dark:border-ucs-600 dark:bg-ucs-950/40 dark:text-ucs-100 dark:hover:bg-ucs-950 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                @click="runRecoverOne(row)">
+                {{ recoveringId === row.id ? 'Recovering…' : 'Recover' }}
+              </button>
             </td>
           </tr>
         </tbody>
@@ -211,12 +221,15 @@ const selectedCouncil = ref('')
 const days = ref(90)
 
 const scanning = ref(false)
-const recovering = ref(false)
+const recoveringAll = ref(false)
+const recoveringId = ref<number | null>(null)
 const message = ref('')
 const messageTone = ref<'idle' | 'success' | 'error'>('idle')
 const failures = ref<FailureRow[]>([])
 const scanMeta = ref<ScanResult | null>(null)
 const recoverSummary = ref<RecoverResult | null>(null)
+
+const recovering = computed(() => recoveringAll.value || recoveringId.value != null)
 
 const messageClass = computed(() => {
   if (messageTone.value === 'success') return 'text-green-700 dark:text-green-300'
@@ -253,6 +266,8 @@ function clearScan() {
   failures.value = []
   scanMeta.value = null
   recoverSummary.value = null
+  recoveringId.value = null
+  recoveringAll.value = false
   message.value = ''
   messageTone.value = 'idle'
 }
@@ -345,9 +360,9 @@ async function runScan() {
   }
 }
 
-async function runRecover() {
-  if (!failures.value.length || !selectedCouncil.value) return
-  recovering.value = true
+async function runRecover(logIds: number[], label = 'HRHIS recovery') {
+  if (!logIds.length || !selectedCouncil.value) return
+
   message.value = ''
   messageTone.value = 'idle'
   try {
@@ -358,7 +373,7 @@ async function runRecover() {
         district: selectedDistrict.value,
         council: selectedCouncil.value,
         days: days.value,
-        logIds: failures.value.map((f) => f.id),
+        logIds,
       },
     )
     const data = res.data?.data
@@ -369,7 +384,7 @@ async function runRecover() {
     messageTone.value = (data?.stillFailed ?? 0) > 0 ? 'error' : 'success'
     toast.add({
       severity: (data?.stillFailed ?? 0) > 0 ? 'warn' : 'success',
-      summary: 'HRHIS recovery',
+      summary: label,
       detail: message.value,
       life: 6000,
     })
@@ -388,9 +403,30 @@ async function runRecover() {
       (typeof error === 'string' ? error : error instanceof Error ? error.message : 'Recovery failed.')
     message.value = msg
     messageTone.value = 'error'
-    toast.add({ severity: 'error', summary: 'Recovery failed', detail: msg, life: 6000 })
+    toast.add({ severity: 'error', summary: label, detail: msg, life: 6000 })
+  }
+}
+
+async function runRecoverAll() {
+  if (!failures.value.length || recovering.value) return
+  recoveringAll.value = true
+  try {
+    await runRecover(
+      failures.value.map((f) => f.id),
+      'Recover all',
+    )
   } finally {
-    recovering.value = false
+    recoveringAll.value = false
+  }
+}
+
+async function runRecoverOne(row: FailureRow) {
+  if (!row?.id || recovering.value) return
+  recoveringId.value = row.id
+  try {
+    await runRecover([row.id], `Recover ${row.NIN || `log #${row.id}`}`)
+  } finally {
+    recoveringId.value = null
   }
 }
 
