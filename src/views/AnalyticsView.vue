@@ -109,16 +109,16 @@
 
       <div class="overflow-x-auto rounded-xl border border-gray-200 dark:border-ucs-800 bg-white dark:bg-ucs-900/40 shadow-sm">
         <!-- Accepted -->
-        <table v-if="activeTab === 'accepted'" class="min-w-full text-sm">
+        <table v-if="activeTab === 'accepted'" class="w-full table-fixed text-sm">
           <thead class="bg-gray-50 dark:bg-ucs-950/60 text-left text-xs uppercase text-gray-500">
             <tr>
-              <th class="px-3 py-2">When</th>
-              <th class="px-3 py-2">NIN</th>
-              <th class="px-3 py-2">Name</th>
-              <th class="px-3 py-2">Kind</th>
-              <th class="px-3 py-2">Location</th>
-              <th class="px-3 py-2">HFR</th>
-              <th class="px-3 py-2">HTTP</th>
+              <th class="px-3 py-2 w-[14%]">When</th>
+              <th class="px-3 py-2 w-[14%]">NIN</th>
+              <th class="px-3 py-2 w-[16%]">Name</th>
+              <th class="px-3 py-2 w-[8%]">Kind</th>
+              <th class="px-3 py-2 w-[16%]">Location</th>
+              <th class="px-3 py-2 w-[12%]">HFR</th>
+              <th class="px-3 py-2 w-[8%]">HTTP</th>
             </tr>
           </thead>
           <tbody>
@@ -138,25 +138,25 @@
         </table>
 
         <!-- Rejected -->
-        <table v-else-if="activeTab === 'rejected'" class="min-w-full text-sm">
+        <table v-else-if="activeTab === 'rejected'" class="w-full table-fixed text-sm">
           <thead class="bg-gray-50 dark:bg-ucs-950/60 text-left text-xs uppercase text-gray-500">
             <tr>
-              <th class="px-3 py-2">When</th>
-              <th class="px-3 py-2">NIN</th>
-              <th class="px-3 py-2">Name</th>
-              <th class="px-3 py-2">Location</th>
-              <th class="px-3 py-2">HTTP</th>
+              <th class="px-3 py-2 w-[14%]">When</th>
+              <th class="px-3 py-2 w-[14%]">NIN</th>
+              <th class="px-3 py-2 w-[14%]">Name</th>
+              <th class="px-3 py-2 w-[14%]">Location</th>
+              <th class="px-3 py-2 w-[8%]">HTTP</th>
               <th class="px-3 py-2">Reason</th>
             </tr>
           </thead>
           <tbody>
             <tr v-for="row in data.rejected" :key="row.logId" class="border-t border-gray-100 dark:border-ucs-800">
               <td class="px-3 py-2 whitespace-nowrap">{{ formatDate(row.createdAt) }}</td>
-              <td class="px-3 py-2 font-mono text-xs">{{ row.nin || '—' }}</td>
+              <td class="px-3 py-2 font-mono text-xs break-all">{{ row.nin || '—' }}</td>
               <td class="px-3 py-2">{{ row.name || '—' }}</td>
-              <td class="px-3 py-2 font-mono text-xs">{{ row.locationCode || '—' }}</td>
+              <td class="px-3 py-2 font-mono text-xs break-all">{{ row.locationCode || '—' }}</td>
               <td class="px-3 py-2">{{ row.httpStatus ?? '—' }}</td>
-              <td class="px-3 py-2 text-red-700 dark:text-red-300">{{ row.errorMessage }}</td>
+              <td class="px-3 py-2 text-red-700 dark:text-red-300 break-words">{{ row.errorMessage }}</td>
             </tr>
             <tr v-if="!data.rejected.length">
               <td colspan="6" class="px-3 py-6 text-center text-gray-500">No open rejections in this period.</td>
@@ -165,43 +165,47 @@
         </table>
 
         <!-- Updates -->
-        <table v-else-if="activeTab === 'updates'" class="min-w-full text-sm">
-          <thead class="bg-gray-50 dark:bg-ucs-950/60 text-left text-xs uppercase text-gray-500">
-            <tr>
-              <th class="px-3 py-2">When</th>
-              <th class="px-3 py-2">NIN</th>
-              <th class="px-3 py-2">Update #</th>
-              <th class="px-3 py-2">Fields changed</th>
-              <th class="px-3 py-2">Old → New</th>
-              <th class="px-3 py-2">Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="row in data.updates" :key="row.logId" class="border-t border-gray-100 dark:border-ucs-800 align-top">
-              <td class="px-3 py-2 whitespace-nowrap">{{ formatDate(row.createdAt) }}</td>
-              <td class="px-3 py-2 font-mono text-xs">{{ row.nin || '—' }}</td>
-              <td class="px-3 py-2">{{ row.updateNumber }} / {{ row.totalUpdatesForNin }}</td>
-              <td class="px-3 py-2">{{ row.updatedFields?.join(', ') || '—' }}</td>
-              <td class="px-3 py-2 font-mono text-xs max-w-md whitespace-pre-wrap">{{ formatFieldChanges(row.fieldChanges) }}</td>
-              <td class="px-3 py-2 text-xs">{{ row.action }}</td>
-            </tr>
-            <tr v-if="!data.updates.length">
-              <td colspan="6" class="px-3 py-6 text-center text-gray-500">No internal update logs in this period.</td>
-            </tr>
-          </tbody>
-        </table>
-        <p v-if="data.updates.length" class="px-3 py-2 text-xs text-gray-500 dark:text-gray-400 border-t border-gray-100 dark:border-ucs-800">
-          Updates from before this enhancement may show new values only (old values were not stored historically).
-        </p>
+        <template v-else-if="activeTab === 'updates'">
+          <table class="w-full table-fixed text-sm">
+            <thead class="bg-gray-50 dark:bg-ucs-950/60 text-left text-xs uppercase text-gray-500">
+              <tr>
+                <th class="px-3 py-2 w-[12%]">When</th>
+                <th class="px-3 py-2 w-[12%]">NIN</th>
+                <th class="px-3 py-2 w-[8%]">Update #</th>
+                <th class="px-3 py-2 w-[14%]">Fields changed</th>
+                <th class="px-3 py-2">Old → New</th>
+                <th class="px-3 py-2 w-[12%]">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="row in data.updates" :key="row.logId" class="border-t border-gray-100 dark:border-ucs-800 align-top">
+                <td class="px-3 py-2 whitespace-nowrap">{{ formatDate(row.createdAt) }}</td>
+                <td class="px-3 py-2 font-mono text-xs break-all">{{ row.nin || '—' }}</td>
+                <td class="px-3 py-2">{{ row.updateNumber }} / {{ row.totalUpdatesForNin }}</td>
+                <td class="px-3 py-2">{{ row.updatedFields?.join(', ') || '—' }}</td>
+                <td class="px-3 py-2 font-mono text-xs whitespace-pre-wrap break-words">{{ formatFieldChanges(row.fieldChanges) }}</td>
+                <td class="px-3 py-2 text-xs">{{ row.action }}</td>
+              </tr>
+              <tr v-if="!data.updates.length">
+                <td colspan="6" class="px-3 py-6 text-center text-gray-500">No internal update logs in this period.</td>
+              </tr>
+            </tbody>
+          </table>
+          <p
+            v-if="data.updates.length"
+            class="px-3 py-2 text-xs text-gray-500 dark:text-gray-400 border-t border-gray-100 dark:border-ucs-800">
+            Updates from before this enhancement may show new values only (old values were not stored historically).
+          </p>
+        </template>
 
         <!-- Duplicates -->
-        <table v-else class="min-w-full text-sm">
+        <table v-else-if="activeTab === 'duplicates'" class="w-full table-fixed text-sm">
           <thead class="bg-gray-50 dark:bg-ucs-950/60 text-left text-xs uppercase text-gray-500">
             <tr>
-              <th class="px-3 py-2">NIN</th>
-              <th class="px-3 py-2">Submissions</th>
-              <th class="px-3 py-2">First</th>
-              <th class="px-3 py-2">Last</th>
+              <th class="px-3 py-2 w-[40%]">NIN</th>
+              <th class="px-3 py-2 w-[15%]">Submissions</th>
+              <th class="px-3 py-2 w-[22%]">First</th>
+              <th class="px-3 py-2 w-[22%]">Last</th>
             </tr>
           </thead>
           <tbody>
