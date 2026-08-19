@@ -128,6 +128,10 @@
               <h4 class="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">
                 Field diff vs registered ICCHW
               </h4>
+              <p class="mb-2 text-xs text-gray-500">
+                Only name, sex, email, and phone can be merged into ICCHW. HFR/location differences are shown for review
+                only.
+              </p>
               <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-ucs-800">
                 <table class="w-full text-xs">
                   <thead class="bg-gray-50 dark:bg-ucs-950/60 text-left uppercase text-gray-500">
@@ -152,7 +156,10 @@
                           :value="diff.field"
                           class="rounded border-gray-400" />
                       </td>
-                      <td class="px-2 py-2 font-medium">{{ diff.field }}</td>
+                      <td class="px-2 py-2 font-medium">
+                        {{ diff.field }}
+                        <span v-if="!diff.mergeable" class="text-gray-400"> (review only)</span>
+                      </td>
                       <td class="px-2 py-2 font-mono break-all">{{ displayValue(diff.registered) }}</td>
                       <td class="px-2 py-2 font-mono break-all">{{ displayValue(diff.incoming) }}</td>
                     </tr>
@@ -162,6 +169,11 @@
             </div>
 
             <div v-if="activeSubmission.isOpen" class="mt-4 flex flex-wrap items-center gap-3 border-t border-gray-100 dark:border-ucs-800 pt-4">
+              <p
+                v-if="actionByLogId[activeSubmission.logId] === 'merge' && !activeSubmission.mergeableDiffs.length"
+                class="w-full text-xs text-amber-700 dark:text-amber-200">
+                Demographics already match ICCHW — merge will mark this duplicate as reviewed with no OpenMRS changes.
+              </p>
               <label class="flex items-center gap-2 text-sm">
                 <input v-model="selectedLogIds" type="checkbox" :value="activeSubmission.logId" class="rounded" />
                 Include in batch
