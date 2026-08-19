@@ -181,8 +181,9 @@
       <div v-if="openSubmissions.length" class="rounded-xl border border-gray-200 dark:border-ucs-800 p-4">
         <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Batch resolution</h3>
         <p class="mt-1 text-xs text-gray-500">
-          {{ selectedLogIds.length }} submission(s) selected · actions are applied per submission; merge uses checked
-          field diffs above.
+          Tick <strong>Include in batch</strong> on each submission above, pick an action per submission, then click
+          <strong>Apply resolution</strong>. Only checked submissions are processed in one go; merge uses the field
+          checkboxes from each submission&apos;s diff table.
         </p>
         <textarea
           v-model="batchNote"
@@ -360,6 +361,7 @@ watch(
     visible.value = val
     if (val) loadDetail()
   },
+  { immediate: true },
 )
 
 watch(visible, (val) => emit('update:modelValue', val))

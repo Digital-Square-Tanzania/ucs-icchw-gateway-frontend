@@ -61,7 +61,7 @@
         type="button"
         :disabled="!selectedCouncil || loading"
         class="rounded-lg bg-ucs-500 px-4 py-2 text-sm font-medium text-white hover:bg-ucs-600 disabled:opacity-50 disabled:cursor-not-allowed"
-        @click="runAnalytics">
+        @click="runAnalytics()">
         {{ loading ? 'Running…' : 'Run analytics' }}
       </button>
     </div>
@@ -235,7 +235,7 @@
               <td class="px-3 py-2">
                 <button
                   type="button"
-                  class="rounded-lg border border-ucs-500 px-2 py-1 text-xs font-medium text-ucs-700 hover:bg-ucs-500/10 dark:text-ucs-200"
+                  class="cursor-pointer rounded-lg border border-ucs-500 px-2 py-1 text-xs font-medium text-ucs-700 hover:bg-ucs-500/10 dark:text-ucs-200"
                   @click="openDuplicateDialog(row.nin)">
                   Review
                 </button>
@@ -254,17 +254,17 @@
         {{ data.limits.internalScanned }} internal update log(s) for this council.
       </p>
     </section>
-
-    <DuplicateResolutionDialog
-      v-model="duplicateDialogOpen"
-      :scope="duplicateScope"
-      :nin="duplicateNin"
-      @resolved="onDuplicateResolved" />
   </template>
+
+  <DuplicateResolutionDialog
+    v-model="duplicateDialogOpen"
+    :scope="duplicateScope"
+    :nin="duplicateNin"
+    @resolved="onDuplicateResolved" />
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, nextTick, onMounted, ref } from 'vue'
 import PageTitle from '@/components/layout/PageTitle.vue'
 import DuplicateResolutionDialog from '@/components/dialogs/DuplicateResolutionDialog.vue'
 import { useAuthStore } from '@/stores/auth'
@@ -397,7 +397,7 @@ const duplicateDialogOpen = ref(false)
 const duplicateNin = ref<string | null>(null)
 
 const duplicateScope = computed(() => {
-  if (!data.value?.scope || !selectedCouncil.value) return null
+  if (!selectedCouncil.value) return null
   return {
     region: selectedRegion.value,
     district: selectedDistrict.value,
@@ -501,10 +501,12 @@ async function loadHierarchy() {
   regions.value = [...set].sort()
 }
 
-async function runAnalytics() {
+async function runAnalytics(preserveTab = false) {
   if (!selectedCouncil.value) return
+  const tab = activeTab.value
   loading.value = true
   error.value = ''
+  const previous = data.value
   data.value = null
   try {
     const params = new URLSearchParams({
@@ -517,8 +519,9 @@ async function runAnalytics() {
       `/gateway/admin/hrhis-council-analytics?${params.toString()}`,
     )
     data.value = response.data?.data ?? null
-    activeTab.value = 'accepted'
+    activeTab.value = preserveTab && tab ? tab : 'accepted'
   } catch (err: unknown) {
+    data.value = previous
     error.value =
       (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
       (err instanceof Error ? err.message : 'Failed to load analytics.')
@@ -528,12 +531,16 @@ async function runAnalytics() {
 }
 
 function openDuplicateDialog(nin: string) {
+  duplicateDialogOpen.value = false
   duplicateNin.value = nin
-  duplicateDialogOpen.value = true
+  nextTick(() => {
+    duplicateDialogOpen.value = true
+  })
 }
 
 function onDuplicateResolved() {
-  if (selectedCouncil.value) runAnalytics()
+  duplicateDialogOpen.value = false
+  if (selectedCouncil.value) runAnalytics(true)
 }
 
 onMounted(() => {
