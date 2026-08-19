@@ -129,8 +129,9 @@
                 Field diff vs registered ICCHW
               </h4>
               <p class="mb-2 text-xs text-gray-500">
-                Only name, sex, email, and phone can be merged into ICCHW. HFR, location code, and location type
-                differences are shown for review — duty station changes must go through HRHIS
+                Name, sex, email, and phone can always be merged. When the incoming HFR matches the registered
+                facility, location code and type can also be merged into the ICCHW assignment. If HFR differs, duty
+                station changes must go through HRHIS
                 <code class="text-[0.65rem]">/chw/station</code>.
               </p>
               <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-ucs-800">
@@ -173,7 +174,8 @@
               <p
                 v-if="actionByLogId[activeSubmission.logId] === 'merge' && !activeSubmission.mergeableDiffs.length"
                 class="w-full text-xs text-amber-700 dark:text-amber-200">
-                Demographics already match ICCHW — merge will mark this duplicate as reviewed with no OpenMRS changes.
+                All mergeable fields already match ICCHW — merge will mark this duplicate as reviewed with no OpenMRS
+                changes.
               </p>
               <label class="flex items-center gap-2 text-sm">
                 <input v-model="selectedLogIds" type="checkbox" :value="activeSubmission.logId" class="rounded" />
