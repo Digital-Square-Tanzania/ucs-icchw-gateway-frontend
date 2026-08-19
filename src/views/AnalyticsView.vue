@@ -202,21 +202,47 @@
         <table v-else-if="activeTab === 'duplicates'" class="w-full table-fixed text-sm">
           <thead class="bg-gray-50 dark:bg-ucs-950/60 text-left text-xs uppercase text-gray-500">
             <tr>
-              <th class="px-3 py-2 w-[40%]">NIN</th>
-              <th class="px-3 py-2 w-[15%]">Submissions</th>
-              <th class="px-3 py-2 w-[22%]">First</th>
-              <th class="px-3 py-2 w-[22%]">Last</th>
+              <th class="px-3 py-2 w-[28%]">NIN</th>
+              <th class="px-3 py-2 w-[10%]">Submissions</th>
+              <th class="px-3 py-2 w-[8%]">Open</th>
+              <th class="px-3 py-2 w-[8%]">Resolved</th>
+              <th class="px-3 py-2 w-[18%]">First</th>
+              <th class="px-3 py-2 w-[18%]">Last</th>
+              <th class="px-3 py-2 w-[10%]">Action</th>
             </tr>
           </thead>
           <tbody>
             <tr v-for="row in data.duplicates" :key="row.nin" class="border-t border-gray-100 dark:border-ucs-800">
-              <td class="px-3 py-2 font-mono text-xs">{{ row.nin }}</td>
+              <td class="px-3 py-2 font-mono text-xs break-all">{{ row.nin }}</td>
               <td class="px-3 py-2">{{ row.submissionCount }}</td>
+              <td class="px-3 py-2">
+                <span
+                  class="rounded px-1.5 py-0.5 text-xs"
+                  :class="row.openCount ? 'bg-amber-500/20 text-amber-800 dark:text-amber-200' : 'text-gray-500'">
+                  {{ row.openCount ?? row.submissionCount }}
+                </span>
+              </td>
+              <td class="px-3 py-2">
+                <span
+                  v-if="row.resolvedCount"
+                  class="rounded bg-green-500/20 px-1.5 py-0.5 text-xs text-green-800 dark:text-green-200">
+                  {{ row.resolvedCount }}
+                </span>
+                <span v-else class="text-gray-500">0</span>
+              </td>
               <td class="px-3 py-2 whitespace-nowrap">{{ formatDate(row.firstAt) }}</td>
               <td class="px-3 py-2 whitespace-nowrap">{{ formatDate(row.lastAt) }}</td>
+              <td class="px-3 py-2">
+                <button
+                  type="button"
+                  class="rounded-lg border border-ucs-500 px-2 py-1 text-xs font-medium text-ucs-700 hover:bg-ucs-500/10 dark:text-ucs-200"
+                  @click="openDuplicateDialog(row.nin)">
+                  Review
+                </button>
+              </td>
             </tr>
             <tr v-if="!data.duplicates.length">
-              <td colspan="4" class="px-3 py-6 text-center text-gray-500">No duplicate NIN submissions in this period.</td>
+              <td colspan="7" class="px-3 py-6 text-center text-gray-500">No duplicate NIN submissions in this period.</td>
             </tr>
           </tbody>
         </table>
@@ -228,12 +254,19 @@
         {{ data.limits.internalScanned }} internal update log(s) for this council.
       </p>
     </section>
+
+    <DuplicateResolutionDialog
+      v-model="duplicateDialogOpen"
+      :scope="duplicateScope"
+      :nin="duplicateNin"
+      @resolved="onDuplicateResolved" />
   </template>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import PageTitle from '@/components/layout/PageTitle.vue'
+import DuplicateResolutionDialog from '@/components/dialogs/DuplicateResolutionDialog.vue'
 import { useAuthStore } from '@/stores/auth'
 
 interface Ward {
@@ -309,6 +342,8 @@ interface UpdateRow {
 interface DuplicateRow {
   nin: string
   submissionCount: number
+  openCount?: number
+  resolvedCount?: number
   firstAt?: string | null
   lastAt?: string | null
 }
@@ -358,6 +393,18 @@ const loading = ref(false)
 const error = ref('')
 const data = ref<AnalyticsData | null>(null)
 const activeTab = ref<'accepted' | 'rejected' | 'updates' | 'duplicates'>('accepted')
+const duplicateDialogOpen = ref(false)
+const duplicateNin = ref<string | null>(null)
+
+const duplicateScope = computed(() => {
+  if (!data.value?.scope || !selectedCouncil.value) return null
+  return {
+    region: selectedRegion.value,
+    district: selectedDistrict.value,
+    council: selectedCouncil.value,
+    days: days.value,
+  }
+})
 
 const prefixHint = computed(() => data.value?.scope.councilPrefixes?.join(', ') || '')
 
@@ -478,6 +525,15 @@ async function runAnalytics() {
   } finally {
     loading.value = false
   }
+}
+
+function openDuplicateDialog(nin: string) {
+  duplicateNin.value = nin
+  duplicateDialogOpen.value = true
+}
+
+function onDuplicateResolved() {
+  if (selectedCouncil.value) runAnalytics()
 }
 
 onMounted(() => {
