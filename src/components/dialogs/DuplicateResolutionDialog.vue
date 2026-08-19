@@ -192,10 +192,24 @@
           class="mt-3 w-full rounded-lg border border-gray-300 dark:border-ucs-700 bg-white dark:bg-ucs-900 px-3 py-2 text-sm" />
       </div>
 
-      <div v-if="resolveResult" class="rounded-lg border border-gray-200 dark:border-ucs-800 p-3 text-xs">
+      <div
+        v-if="resolveResult"
+        class="rounded-lg border p-3 text-xs"
+        :class="
+          resolveResult.failed > 0
+            ? 'border-red-300 bg-red-500/10 dark:border-red-800'
+            : 'border-gray-200 dark:border-ucs-800'
+        ">
         <p class="font-semibold mb-2">Last resolution run</p>
+        <p v-if="resolveResult.failed > 0" class="mb-2 text-red-700 dark:text-red-300">
+          {{ resolveResult.failed }} failed · {{ resolveResult.resolved }} resolved ·
+          {{ resolveResult.skipped }} skipped
+        </p>
         <ul class="space-y-1">
-          <li v-for="row in resolveResult.results" :key="`${row.logId}-${row.status}`">
+          <li
+            v-for="row in resolveResult.results"
+            :key="`${row.logId}-${row.status}`"
+            :class="row.status === 'failed' ? 'text-red-700 dark:text-red-300 font-medium' : ''">
             #{{ row.logId }} · {{ row.status }} · {{ row.message }}
           </li>
         </ul>
@@ -295,7 +309,14 @@ interface ResolveResult {
   resolved: number
   failed: number
   skipped: number
-  results: Array<{ logId: number; status: string; message?: string; action?: string }>
+  results: Array<{ logId: number; status: string; message?: string; action?: string; errorCode?: number | null }>
+}
+
+function formatResolutionToastDetail(summary?: string, result?: ResolveResult | null) {
+  const failures = result?.results?.filter((r) => r.status === 'failed') ?? []
+  if (!failures.length) return summary || 'Resolution applied.'
+  const lines = failures.map((r) => `#${r.logId}: ${r.message || 'Unknown error'}`)
+  return [summary, ...lines].filter(Boolean).join(' · ')
 }
 
 const props = defineProps<{
@@ -475,8 +496,8 @@ async function applyResolution() {
     toast.add({
       severity,
       summary: 'Duplicate resolution',
-      detail: response.data?.message || 'Resolution applied.',
-      life: 7000,
+      detail: formatResolutionToastDetail(response.data?.message, result),
+      life: 10000,
     })
 
     await loadDetail()
