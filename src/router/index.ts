@@ -6,7 +6,8 @@ import LoginView from '@/views/LoginView.vue'
 import NotFoundView from '@/views/NotFoundView.vue'
 import AddUserView from '@/views/AddUserView.vue'
 import SettingsView from '@/views/SettingsView.vue'
-import { SETTINGS_ROLES, type RoleName } from '@/constants/roles'
+import AnalyticsView from '@/views/AnalyticsView.vue'
+import { ANALYTICS_ROLES, SETTINGS_ROLES, type RoleName } from '@/constants/roles'
 
 const routes = [
   {
@@ -42,6 +43,12 @@ const routes = [
     name: 'Settings',
     component: SettingsView,
     meta: { requiresAuth: true, roles: SETTINGS_ROLES as RoleName[] },
+  },
+  {
+    path: '/analytics',
+    name: 'Analytics',
+    component: AnalyticsView,
+    meta: { requiresAuth: true, roles: ANALYTICS_ROLES as RoleName[] },
   },
   { path: '/:pathMatch(.*)*', name: 'NotFound', component: NotFoundView }, // Catch-all 404 route
 ]

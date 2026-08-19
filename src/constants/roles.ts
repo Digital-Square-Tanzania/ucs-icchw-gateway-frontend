@@ -9,8 +9,14 @@ export type RoleName = (typeof Role)[keyof typeof Role]
 
 export const SETTINGS_ROLES: RoleName[] = [Role.MOH_ADMIN, Role.UCS_DEVELOPER]
 
+export const ANALYTICS_ROLES: RoleName[] = [Role.MOH_ADMIN, Role.UCS_DEVELOPER]
+
 export function canAccessSettings(role: string | null | undefined): boolean {
   return !!role && SETTINGS_ROLES.includes(role as RoleName)
+}
+
+export function canAccessAnalytics(role: string | null | undefined): boolean {
+  return !!role && ANALYTICS_ROLES.includes(role as RoleName)
 }
 
 export function isUcsDeveloper(role: string | null | undefined): boolean {

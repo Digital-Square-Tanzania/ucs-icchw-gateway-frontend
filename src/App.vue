@@ -18,6 +18,7 @@
         <MainLink route="/dashboard" title="Dashboard" />
         <MainLink route="/users" title="Users" />
         <MainLink v-if="auth.canAccessSettings" route="/settings" title="Settings" />
+        <MainLink v-if="auth.canAccessAnalytics" route="/analytics" title="Analytics" />
       </div>
       <div id="user-area" class="p-4 tracking-wider w-1/4">
         <span
