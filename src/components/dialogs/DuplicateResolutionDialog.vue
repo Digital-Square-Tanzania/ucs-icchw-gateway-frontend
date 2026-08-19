@@ -129,8 +129,9 @@
                 Field diff vs registered ICCHW
               </h4>
               <p class="mb-2 text-xs text-gray-500">
-                Only name, sex, email, and phone can be merged into ICCHW. HFR/location differences are shown for review
-                only.
+                Only name, sex, email, and phone can be merged into ICCHW. HFR, location code, and location type
+                differences are shown for review — duty station changes must go through HRHIS
+                <code class="text-[0.65rem]">/chw/station</code>.
               </p>
               <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-ucs-800">
                 <table class="w-full text-xs">
