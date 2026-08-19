@@ -255,6 +255,60 @@ interface Country {
 }
 type Hierarchy = Record<string, Country>
 
+interface FieldChange {
+  old?: unknown
+  new?: unknown
+}
+
+interface AcceptedRow {
+  logId: number
+  logUuid?: string
+  createdAt: string
+  nin?: string | null
+  name?: string | null
+  locationCode?: string | null
+  hfrCode?: string | null
+  httpStatus?: number | null
+  kind?: string
+  message?: string | null
+}
+
+interface RejectedRow {
+  logId: number
+  logUuid?: string
+  createdAt: string
+  nin?: string | null
+  name?: string | null
+  locationCode?: string | null
+  hfrCode?: string | null
+  httpStatus?: number | null
+  errorMessage: string
+  recoveredAt?: string | null
+}
+
+interface UpdateRow {
+  logId: number
+  logUuid?: string
+  createdAt: string
+  nin?: string | null
+  name?: string | null
+  locationCode?: string | null
+  action?: string
+  updateNumber: number
+  totalUpdatesForNin: number
+  updatedFields?: string[]
+  fieldChanges?: Record<string, FieldChange>
+  newValues?: Record<string, unknown>
+  note?: string
+}
+
+interface DuplicateRow {
+  nin: string
+  submissionCount: number
+  firstAt?: string | null
+  lastAt?: string | null
+}
+
 interface AnalyticsSummary {
   incomingRows: number
   uniqueNins: number
@@ -279,10 +333,10 @@ interface AnalyticsData {
     councilPrefixes: string[]
   }
   summary: AnalyticsSummary
-  accepted: Array<Record<string, unknown>>
-  rejected: Array<Record<string, unknown>>
-  updates: Array<Record<string, unknown>>
-  duplicates: Array<Record<string, unknown>>
+  accepted: AcceptedRow[]
+  rejected: RejectedRow[]
+  updates: UpdateRow[]
+  duplicates: DuplicateRow[]
   limits?: { maxTableRows: number; envelopeScanned: number; internalScanned: number }
 }
 
@@ -344,7 +398,7 @@ function formatDate(value?: string | null) {
   }
 }
 
-function formatFieldChanges(changes?: Record<string, { old?: unknown; new?: unknown }>) {
+function formatFieldChanges(changes?: Record<string, FieldChange>) {
   if (!changes || !Object.keys(changes).length) return '—'
   return Object.entries(changes)
     .map(([field, change]) => {
