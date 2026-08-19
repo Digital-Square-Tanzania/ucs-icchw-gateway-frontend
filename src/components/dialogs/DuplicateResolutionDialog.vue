@@ -469,15 +469,18 @@ async function applyResolution() {
     )
 
     resolveResult.value = response.data?.data ?? null
+    const result = resolveResult.value
+    const severity =
+      result && result.failed > 0 ? (result.resolved > 0 ? 'warn' : 'error') : 'success'
     toast.add({
-      severity: 'success',
+      severity,
       summary: 'Duplicate resolution',
       detail: response.data?.message || 'Resolution applied.',
-      life: 5000,
+      life: 7000,
     })
 
     await loadDetail()
-    emit('resolved')
+    if (result && result.resolved > 0) emit('resolved')
   } catch (err: unknown) {
     toast.add({
       severity: 'error',
