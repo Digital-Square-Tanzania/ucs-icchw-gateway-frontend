@@ -99,7 +99,7 @@ import IconHospital from '@/components/icons/IconHospital.vue'
 import DonutChart from '@/components/charts/DonutChart.vue'
 import LastUsersTable from '@/components/tables/LastusersTable.vue'
 import PageTitle from '@/components/layout/PageTitle.vue'
-import { onMounted, computed, ref, onUnmounted } from 'vue'
+import { onMounted, onUnmounted, computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import ApiClient from '@/utilities/ApiClient'
 
@@ -109,14 +109,17 @@ import BoxInfograms from '@/components/charts/BoxInfograms.vue'
 import { useSyncStore } from '@/stores/sync'
 
 const syncStore = useSyncStore()
-const { syncStatus, lastSynced, startSync, initWebSocket } = syncStore
+const { syncStatus, lastSynced, startSync } = syncStore
+
+let stopSyncListener: (() => void) | undefined
 
 onMounted(() => {
-  initWebSocket(fetchDashboardData)
   fetchDashboardData()
+  stopSyncListener = syncStore.onSyncCompleteEvent(() => fetchDashboardData())
 })
+
 onUnmounted(() => {
-  syncStore.cleanupWebSocket()
+  stopSyncListener?.()
 })
 
 interface DashboardData {

@@ -48,14 +48,30 @@ import Toast from 'primevue/toast'
 import { onMounted, watch } from 'vue'
 import MainLink from './components/layout/MainLink.vue'
 import TransparentCover from './components/layout/TransparentCover.vue'
+import { useSyncStore } from '@/stores/sync'
 
 const auth = useAuthStore()
+const syncStore = useSyncStore()
 
 onMounted(() => {
   if (auth.isAuthenticated && !auth.user) {
     auth.fetchProfile()
   }
+  if (auth.isAuthenticated) {
+    syncStore.initWebSocket()
+  }
 })
+
+watch(
+  () => auth.isAuthenticated,
+  (isAuthenticated) => {
+    if (isAuthenticated) {
+      syncStore.initWebSocket()
+    } else {
+      syncStore.cleanupWebSocket()
+    }
+  },
+)
 const router = useRouter()
 const toast = useToast()
 const route = useRoute()

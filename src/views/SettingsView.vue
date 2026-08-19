@@ -183,7 +183,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useToast } from 'primevue/usetoast'
 import PageTitle from '@/components/layout/PageTitle.vue'
 import ActivationEmailPanel from '@/components/settings/ActivationEmailPanel.vue'
@@ -433,7 +433,6 @@ async function runDevTool(tool: DevTool) {
 }
 
 onMounted(() => {
-  syncStore.initWebSocket()
   loadHrhisTimeseries()
 })
 
@@ -449,7 +448,4 @@ watch(
   { deep: true },
 )
 
-onUnmounted(() => {
-  syncStore.cleanupWebSocket()
-})
 </script>

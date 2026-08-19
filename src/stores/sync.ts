@@ -51,15 +51,18 @@ export const useSyncStore = defineStore('syncStore', () => {
   const hrhisRecovery = ref<HrhisRecoveryProgress | null>(null)
   let socket: WebSocket | null = null
   const recoveryListeners = new Set<(event: HrhisRecoveryProgress & { type: string }) => void>()
+  const syncCompleteListeners = new Set<(path: string) => void>()
 
-  const handleSyncComplete = (path: string, onSyncComplete?: () => void) => {
+  const handleSyncComplete = (path: string) => {
     console.log(`Sync complete for ${path}`)
     syncStatus.value[path] = 'synced'
     lastSynced.value[path] = new Date().toLocaleDateString()
-    if (onSyncComplete) onSyncComplete()
+    for (const listener of syncCompleteListeners) {
+      listener(path)
+    }
   }
 
-  const handleSocketMessage = (event: MessageEvent, onSyncComplete?: () => void) => {
+  const handleSocketMessage = (event: MessageEvent) => {
     let data: Record<string, unknown>
     try {
       data = JSON.parse(event.data as string)
@@ -68,7 +71,7 @@ export const useSyncStore = defineStore('syncStore', () => {
     }
 
     if (data.type === 'sync-complete' && data.path) {
-      handleSyncComplete(String(data.path), onSyncComplete)
+      handleSyncComplete(String(data.path))
       return
     }
 
@@ -103,15 +106,23 @@ export const useSyncStore = defineStore('syncStore', () => {
     syncStatus.value[path] = 'syncing'
 
     try {
-      await apiClient.post('/dashboard/sync', { path })
-      // Completion is signaled via WebSocket (same origin as VITE_API_URL + /ws).
+      const response = await apiClient.post<{
+        data?: { synced?: boolean; path?: string }
+      }>('/dashboard/sync', { path })
+
+      const payload = response.data?.data
+      if (payload?.synced) {
+        handleSyncComplete(payload.path || path)
+      }
+      // WebSocket may also broadcast sync-complete for other open tabs.
     } catch (error) {
       console.error(`❌ Sync error for ${path}:`, error)
       syncStatus.value[path] = 'unsynced'
+      throw error
     }
   }
 
-  const initWebSocket = (onSyncComplete?: () => void) => {
+  const initWebSocket = () => {
     if (socket && (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING)) {
       return
     }
@@ -129,7 +140,7 @@ export const useSyncStore = defineStore('syncStore', () => {
       console.log('WebSocket connected')
     })
 
-    socket.addEventListener('message', (event) => handleSocketMessage(event, onSyncComplete))
+    socket.addEventListener('message', handleSocketMessage)
 
     socket.addEventListener('error', (e) => {
       console.error('WebSocket error:', e)
@@ -139,6 +150,11 @@ export const useSyncStore = defineStore('syncStore', () => {
       console.log('WebSocket closed')
       socket = null
     })
+  }
+
+  const onSyncCompleteEvent = (listener: (path: string) => void) => {
+    syncCompleteListeners.add(listener)
+    return () => syncCompleteListeners.delete(listener)
   }
 
   const onHrhisRecoveryEvent = (listener: (event: HrhisRecoveryProgress & { type: string }) => void) => {
@@ -156,6 +172,7 @@ export const useSyncStore = defineStore('syncStore', () => {
     }
     socket = null
     recoveryListeners.clear()
+    syncCompleteListeners.clear()
   }
 
   return {
@@ -164,6 +181,7 @@ export const useSyncStore = defineStore('syncStore', () => {
     hrhisRecovery,
     startSync,
     initWebSocket,
+    onSyncCompleteEvent,
     onHrhisRecoveryEvent,
     clearHrhisRecovery,
     cleanupWebSocket,
