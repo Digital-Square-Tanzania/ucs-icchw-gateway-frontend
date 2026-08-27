@@ -99,19 +99,19 @@
     <section>
       <h2 class="text-lg font-semibold text-ucs-700 dark:text-ucs-200 mb-1">Maintenance</h2>
       <p class="text-sm text-gray-600 dark:text-gray-300 mb-4">
-        Clean up local records left behind when OpenMRS registration was rolled back, and recover HRHIS
-        registrations that failed on location lookup.
+        Refresh local ICCHW records from OpenMRS, clean up orphaned rows, and recover HRHIS registrations that failed
+        on location lookup.
       </p>
       <div class="grid gap-4 lg:grid-cols-2">
+        <TeamMemberSyncPanel />
         <article
           class="rounded-xl border border-gray-200 dark:border-ucs-800 bg-white dark:bg-ucs-900/40 p-5 shadow-sm">
           <h3 class="text-base font-semibold text-gray-900 dark:text-white">
-            Remove Orphaned Local CHW Records
+            Remove Orphaned Local CHW Records Only
           </h3>
           <p class="mt-2 text-sm text-gray-600 dark:text-gray-300">
-            Scan <code class="text-xs">openmrs_team_members</code> and delete rows (plus related activations,
-            username counters, and person attributes) whose OpenMRS team-member UUID no longer exists. Safe for
-            retrying failed HRHIS registrations.
+            Purge-only pass when you do not need a full OpenMRS refresh. Prefer
+            <strong>Sync from OpenMRS</strong> for updated email, phone, and team data.
           </p>
           <button
             type="button"
@@ -189,6 +189,7 @@ import PageTitle from '@/components/layout/PageTitle.vue'
 import ActivationEmailPanel from '@/components/settings/ActivationEmailPanel.vue'
 import HrhisRegisterChart, { type HrhisBucket } from '@/components/settings/HrhisRegisterChart.vue'
 import HrhisLocationRecoveryPanel from '@/components/settings/HrhisLocationRecoveryPanel.vue'
+import TeamMemberSyncPanel from '@/components/settings/TeamMemberSyncPanel.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useSyncStore } from '@/stores/sync'
 import { activationEmailControlUrl } from '@/utilities/backend-url'

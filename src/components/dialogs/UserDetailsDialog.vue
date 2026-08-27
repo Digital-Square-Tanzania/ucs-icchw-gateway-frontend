@@ -64,6 +64,20 @@
         </section>
 
         <section>
+          <h3 class="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">Account</h3>
+          <div class="grid gap-2 sm:grid-cols-2">
+            <DetailField label="Activation status" :value="user.accountStatus" />
+            <DetailField label="Activated at" :value="formatDate(user.activationUsedAt)" />
+            <DetailField label="Registration email" :value="user.activationEmail" />
+            <DetailField label="Registration phone" :value="user.activationPhone" />
+          </div>
+          <p class="mt-2 text-[0.65rem] leading-snug text-gray-500 dark:text-gray-400">
+            Contact details are loaded live from OpenMRS when available. Activation links are sent by email only;
+            registration email is stored on the activation record from HRHIS registration.
+          </p>
+        </section>
+
+        <section>
           <h3 class="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">System IDs</h3>
           <div class="grid gap-2 sm:grid-cols-2">
             <DetailField label="OpenMRS UUID" :value="user.openMrsUuid" mono />
@@ -129,6 +143,10 @@ interface TeamMemberDetail {
   personUuid?: string
   userUuid?: string
   accountStatus?: string
+  activationEmail?: string
+  activationPhone?: string
+  activationUsedAt?: string
+  dataSource?: string
   createdAt?: string
   updatedAt?: string
 }
@@ -211,6 +229,8 @@ function display(value: string | null | undefined) {
 
 function formatDate(dateStr: string | undefined) {
   if (!dateStr) return '—'
-  return format(new Date(dateStr), 'dd MMM yyyy, HH:mm')
+  const dt = new Date(dateStr)
+  if (Number.isNaN(dt.getTime())) return '—'
+  return format(dt, 'dd MMM yyyy, HH:mm')
 }
 </script>

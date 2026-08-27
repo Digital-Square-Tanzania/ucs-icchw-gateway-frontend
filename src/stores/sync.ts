@@ -20,6 +20,29 @@ export interface HrhisRecoveryProgress {
   } | null
 }
 
+export interface TeammemberSyncProgress {
+  jobId?: string
+  status?: 'running' | 'complete' | 'error'
+  phase?: 'syncing' | 'purging' | 'complete' | 'error'
+  total: number
+  processed: number
+  upserted: number
+  purged: number
+  kept: number
+  skipped: number
+  errors: number
+  message?: string
+  sync?: Record<string, number>
+  purge?: Record<string, number>
+  current?: {
+    openMrsUuid?: string | null
+    username?: string | null
+    name?: string | null
+    action?: string
+    message?: string
+  } | null
+}
+
 function resolveWebSocketUrl(): string {
   const explicit = import.meta.env.VITE_WS_URL
   if (explicit) return explicit
@@ -49,8 +72,10 @@ export const useSyncStore = defineStore('syncStore', () => {
   const syncStatus = ref<Record<string, 'unsynced' | 'syncing' | 'synced'>>({})
   const lastSynced = ref<Record<string, string>>({})
   const hrhisRecovery = ref<HrhisRecoveryProgress | null>(null)
+  const teammemberSync = ref<TeammemberSyncProgress | null>(null)
   let socket: WebSocket | null = null
   const recoveryListeners = new Set<(event: HrhisRecoveryProgress & { type: string }) => void>()
+  const teammemberSyncListeners = new Set<(event: TeammemberSyncProgress & { type: string }) => void>()
   const syncCompleteListeners = new Set<(path: string) => void>()
 
   const handleSyncComplete = (path: string) => {
@@ -94,6 +119,35 @@ export const useSyncStore = defineStore('syncStore', () => {
       }
       hrhisRecovery.value = progress
       for (const listener of recoveryListeners) {
+        listener({ ...progress, type: String(data.type) })
+      }
+      return
+    }
+
+    if (data.type === 'teammember-sync-progress' || data.type === 'teammember-sync-complete') {
+      const progress: TeammemberSyncProgress = {
+        jobId: data.jobId ? String(data.jobId) : undefined,
+        status:
+          data.type === 'teammember-sync-complete'
+            ? data.status === 'error'
+              ? 'error'
+              : 'complete'
+            : 'running',
+        phase: (data.phase as TeammemberSyncProgress['phase']) || undefined,
+        total: Number(data.total) || 0,
+        processed: Number(data.processed) || 0,
+        upserted: Number(data.upserted) || 0,
+        purged: Number(data.purged) || 0,
+        kept: Number(data.kept) || 0,
+        skipped: Number(data.skipped) || 0,
+        errors: Number(data.errors) || 0,
+        message: data.message ? String(data.message) : undefined,
+        sync: (data.sync as Record<string, number>) || undefined,
+        purge: (data.purge as Record<string, number>) || undefined,
+        current: (data.current as TeammemberSyncProgress['current']) ?? null,
+      }
+      teammemberSync.value = progress
+      for (const listener of teammemberSyncListeners) {
         listener({ ...progress, type: String(data.type) })
       }
     }
@@ -162,8 +216,17 @@ export const useSyncStore = defineStore('syncStore', () => {
     return () => recoveryListeners.delete(listener)
   }
 
+  const onTeammemberSyncEvent = (listener: (event: TeammemberSyncProgress & { type: string }) => void) => {
+    teammemberSyncListeners.add(listener)
+    return () => teammemberSyncListeners.delete(listener)
+  }
+
   const clearHrhisRecovery = () => {
     hrhisRecovery.value = null
+  }
+
+  const clearTeammemberSync = () => {
+    teammemberSync.value = null
   }
 
   const cleanupWebSocket = () => {
@@ -172,6 +235,7 @@ export const useSyncStore = defineStore('syncStore', () => {
     }
     socket = null
     recoveryListeners.clear()
+    teammemberSyncListeners.clear()
     syncCompleteListeners.clear()
   }
 
@@ -179,11 +243,14 @@ export const useSyncStore = defineStore('syncStore', () => {
     syncStatus,
     lastSynced,
     hrhisRecovery,
+    teammemberSync,
     startSync,
     initWebSocket,
     onSyncCompleteEvent,
     onHrhisRecoveryEvent,
+    onTeammemberSyncEvent,
     clearHrhisRecovery,
+    clearTeammemberSync,
     cleanupWebSocket,
   }
 })
