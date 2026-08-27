@@ -29,7 +29,7 @@
     <DataTable :value="users" paginator :rows="pageSize" :first="page * pageSize"
       :rowsPerPageOptions="[5, 10, 20, 50]" :lazy="true"
       :totalRecords="totalRecords" @page="onPageChange" :loading="loading" tableStyle="min-width: 50rem" stripedRows
-      @rowSelect="onRowClick" selectionMode="single">
+      @rowSelect="onRowClick" :selectionMode="currentSystem === 'openmrs' ? 'single' : undefined">
       <template #header>
         <div class="flex justify-between items-center">
           <span class="text-lg font-semibold">{{ systemTitle }} Users</span>
@@ -279,6 +279,7 @@ function clearPageQuery() {
 }
 
 function onRowClick(event: { data: any }) {
+  if (currentSystem.value !== "openmrs" || !event.data?.uuid) return;
   selectedUser.value = event.data.uuid;
   showDialog.value = true;
 }
