@@ -71,7 +71,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onUnmounted, ref } from 'vue'
+import { computed, ref } from 'vue'
 import { useToast } from 'primevue'
 import { useAuthStore } from '@/stores/auth'
 import { useSyncStore, type TeammemberSyncProgress } from '@/stores/sync'
@@ -96,8 +96,6 @@ const message = ref('')
 const messageTone = ref<'idle' | 'success' | 'error'>('idle')
 const progress = ref<TeammemberSyncProgress | null>(null)
 const summary = ref<SyncSummary | null>(null)
-
-let unsubscribe: (() => void) | null = null
 
 const phaseLabel = computed(() => {
   if (progress.value?.phase === 'purging') return 'purging orphans'
@@ -200,8 +198,4 @@ async function runSync() {
     running.value = false
   }
 }
-
-onUnmounted(() => {
-  unsubscribe?.()
-})
 </script>
