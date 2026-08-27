@@ -13,13 +13,20 @@
         <Select v-model="selectedSystem" :options="systems" optionLabel="name" placeholder="Add New User" class="w-48"
           @change="navigateToAddUser" />
       </div>
-      <div id="search-filter" class="w-1/4 ">
-        <InputText v-model="searchQuery" placeholder="Search..." class="w-full" @input="filterUsers" />
+      <div id="search-filter" class="w-1/4">
+        <InputText
+          v-model="searchQuery"
+          placeholder="Search by username or name..."
+          class="w-full"
+          @input="onSearchInput" />
+        <p class="mt-1 text-[0.65rem] leading-snug text-gray-500 dark:text-gray-400">
+          Searches all records by username, given name, family name, or second name only.
+        </p>
       </div>
     </div>
 
     <!-- Table Data -->
-    <DataTable :value="filteredUsers" paginator :rows="pageSize" :first="page * pageSize"
+    <DataTable :value="users" paginator :rows="pageSize" :first="page * pageSize"
       :rowsPerPageOptions="[5, 10, 20, 50]" :lazy="true"
       :totalRecords="totalRecords" @page="onPageChange" :loading="loading" tableStyle="min-width: 50rem" stripedRows
       @rowSelect="onRowClick" selectionMode="single">
@@ -42,7 +49,7 @@
           </span>
           <span v-else-if="col.field === 'locationName'"
             class="text-xs px-2 py-0.5 rounded-md bg-white-500 dark:bg-black-500">
-            {{ slotProps.data.teamName || "UNKNOWN" }}
+            {{ slotProps.data.locationName || "UNKNOWN" }}
           </span>
           <span v-else>
             {{ slotProps.data[col.field] || "UNKNOWN" }}
@@ -76,15 +83,15 @@ const apiClient = new ApiClient(authStore.accessToken);
 const toast = useToast();
 
 const users = ref<any[]>([]);
-const filteredUsers = ref<any[]>([]);
 const searchQuery = ref<string>("");
+let searchDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 
-function filterUsers() {
-  filteredUsers.value = users.value.filter((user) =>
-    Object.values(user).some((value) =>
-      String(value).toLowerCase().includes(searchQuery.value.toLowerCase())
-    )
-  );
+function onSearchInput() {
+  if (searchDebounceTimer) clearTimeout(searchDebounceTimer);
+  searchDebounceTimer = setTimeout(() => {
+    page.value = 0;
+    fetchUsers();
+  }, 300);
 }
 const selectedSystem = ref<{ name: string; code: string } | null>(null);
 const loading = ref<boolean>(false);
@@ -158,8 +165,17 @@ async function fetchUsers(systemCode?: string) {
   columns.value = columnMapping;
 
   try {
+    const trimmedSearch = searchQuery.value.trim();
+    const params: Record<string, string | number> = {
+      page: page.value + 1,
+      pageSize: pageSize.value,
+    };
+    if (trimmedSearch) {
+      params.search = trimmedSearch;
+    }
+
     const response = await apiClient.get<{ data: { users?: any[]; total?: number } }>(url, {
-      params: { page: page.value + 1, pageSize: pageSize.value },
+      params,
     });
 
     if (activeSystem === "dhis2") {
@@ -196,7 +212,6 @@ async function fetchUsers(systemCode?: string) {
       }
       return user;
     });
-    filteredUsers.value = users.value;
     totalRecords.value = response.data.data.total || 0;
   } catch (error) {
     if ((error as any).response && (error as any).response.status === 401) {
@@ -215,6 +230,7 @@ async function fetchUsers(systemCode?: string) {
 function selectSystem(systemCode: string) {
   if (systemCode !== currentSystem.value) {
     page.value = 0;
+    searchQuery.value = "";
   }
   fetchUsers(systemCode);
 }
