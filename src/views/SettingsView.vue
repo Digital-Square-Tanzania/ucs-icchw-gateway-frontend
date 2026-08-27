@@ -148,35 +148,51 @@
     </section>
 
     <!-- Advanced (Developer only) -->
-    <section v-if="auth.isUcsDeveloper">
-      <h2 class="text-lg font-semibold text-ucs-700 dark:text-ucs-200 mb-1">Advanced</h2>
-      <p class="text-sm text-amber-700 dark:text-amber-300 mb-4">
-        UCS Developer only — location, team, and recovery maintenance. Use with care in production.
-      </p>
-      <div class="grid gap-4 lg:grid-cols-2">
-        <article
-          v-for="tool in devTools"
-          :key="tool.id"
-          class="rounded-xl border border-amber-200/80 dark:border-amber-900/50 bg-white dark:bg-ucs-900/40 p-5 shadow-sm">
-          <div class="flex items-start justify-between gap-2">
-            <h3 class="text-base font-semibold text-gray-900 dark:text-white">{{ tool.title }}</h3>
-            <span
-              class="shrink-0 rounded-full bg-amber-100 dark:bg-amber-950 px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide text-amber-800 dark:text-amber-200">
-              Dev
-            </span>
-          </div>
-          <p class="mt-2 text-sm text-gray-600 dark:text-gray-300">{{ tool.description }}</p>
-          <button
-            type="button"
-            :disabled="devStatus[tool.id] === 'running'"
-            class="mt-4 rounded-lg border border-amber-600 bg-amber-50 px-4 py-2 text-sm font-medium text-amber-900 hover:bg-amber-100 dark:border-amber-700 dark:bg-amber-950/50 dark:text-amber-100 dark:hover:bg-amber-950 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
-            @click="runDevTool(tool)">
-            {{ devStatus[tool.id] === 'running' ? 'Running…' : tool.actionLabel }}
-          </button>
-          <p v-if="devMessages[tool.id]" class="mt-2 text-xs" :class="devMessageClass(tool.id)">
-            {{ devMessages[tool.id] }}
+    <section v-if="auth.isUcsDeveloper" class="rounded-xl border border-amber-200/80 dark:border-amber-900/50 bg-white dark:bg-ucs-900/40 shadow-sm">
+      <button
+        type="button"
+        class="flex w-full items-start justify-between gap-3 p-5 text-left transition-colors hover:bg-amber-50/60 dark:hover:bg-amber-950/20"
+        :aria-expanded="advancedExpanded"
+        @click="advancedExpanded = !advancedExpanded">
+        <div>
+          <h2 class="text-lg font-semibold text-ucs-700 dark:text-ucs-200">Advanced</h2>
+          <p class="mt-1 text-sm text-amber-700 dark:text-amber-300">
+            UCS Developer only — location, team, and recovery maintenance. Use with care in production.
           </p>
-        </article>
+        </div>
+        <span
+          class="mt-1 shrink-0 text-amber-700 dark:text-amber-300 transition-transform duration-200"
+          :class="{ 'rotate-180': advancedExpanded }"
+          aria-hidden="true">
+          ▾
+        </span>
+      </button>
+      <div v-show="advancedExpanded" class="border-t border-amber-200/80 dark:border-amber-900/50 p-5 pt-4">
+        <div class="grid gap-4 lg:grid-cols-2">
+          <article
+            v-for="tool in devTools"
+            :key="tool.id"
+            class="rounded-xl border border-amber-200/80 dark:border-amber-900/50 bg-white dark:bg-ucs-900/40 p-5 shadow-sm">
+            <div class="flex items-start justify-between gap-2">
+              <h3 class="text-base font-semibold text-gray-900 dark:text-white">{{ tool.title }}</h3>
+              <span
+                class="shrink-0 rounded-full bg-amber-100 dark:bg-amber-950 px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide text-amber-800 dark:text-amber-200">
+                Dev
+              </span>
+            </div>
+            <p class="mt-2 text-sm text-gray-600 dark:text-gray-300">{{ tool.description }}</p>
+            <button
+              type="button"
+              :disabled="devStatus[tool.id] === 'running'"
+              class="mt-4 rounded-lg border border-amber-600 bg-amber-50 px-4 py-2 text-sm font-medium text-amber-900 hover:bg-amber-100 dark:border-amber-700 dark:bg-amber-950/50 dark:text-amber-100 dark:hover:bg-amber-950 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+              @click="runDevTool(tool)">
+              {{ devStatus[tool.id] === 'running' ? 'Running…' : tool.actionLabel }}
+            </button>
+            <p v-if="devMessages[tool.id]" class="mt-2 text-xs" :class="devMessageClass(tool.id)">
+              {{ devMessages[tool.id] }}
+            </p>
+          </article>
+        </div>
       </div>
     </section>
   </div>
@@ -347,6 +363,7 @@ const devTools: DevTool[] = [
 
 const devStatus = reactive<Record<string, 'idle' | 'running' | 'success' | 'error'>>({})
 const devMessages = reactive<Record<string, string>>({})
+const advancedExpanded = ref(false)
 
 function syncMessageClass(path: string) {
   return syncStatus.value[path] === 'synced'
