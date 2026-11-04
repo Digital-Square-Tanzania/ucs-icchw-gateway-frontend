@@ -55,6 +55,7 @@
           <option :value="90">Last 90 days</option>
           <option :value="180">Last 180 days</option>
           <option :value="365">Last 365 days</option>
+          <option :value="0">More than 365 days</option>
         </select>
       </div>
       <button
@@ -74,7 +75,7 @@
       <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
         <h2 class="text-lg font-semibold text-ucs-700 dark:text-ucs-200">Summary</h2>
         <p class="text-xs text-gray-500 dark:text-gray-400" :title="prefixHint">
-          {{ data.scope.council }} · {{ data.scope.days }} days · prefixes:
+          {{ data.scope.council }} · {{ lookbackLabel(data.scope.days) }} · prefixes:
           {{ data.scope.councilPrefixes?.join(', ') || '—' }}
         </p>
       </div>
@@ -438,6 +439,10 @@ function eachRegion(fn: (region: Region) => void) {
       }
     }
   }
+}
+
+function lookbackLabel(days: number) {
+  return days === 0 ? 'More than 365 days' : `${days} days`
 }
 
 function formatDate(value?: string | null) {
