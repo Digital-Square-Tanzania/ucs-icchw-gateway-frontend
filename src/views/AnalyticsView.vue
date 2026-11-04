@@ -66,6 +66,14 @@
         {{ loading ? 'Running…' : 'Run analytics' }}
       </button>
     </div>
+    <p v-if="hierarchyLoading" class="mt-3 text-xs text-gray-500 dark:text-gray-400">Loading regions…</p>
+    <p v-else-if="hierarchyError" class="mt-3 text-sm text-red-600 dark:text-red-400">{{ hierarchyError }}</p>
+    <p
+      v-else-if="!regions.length"
+      class="mt-3 text-sm text-amber-700 dark:text-amber-300">
+      No regions loaded. Ask an admin to run Settings → Advanced → Sync Locations (full), then Refresh Location
+      Hierarchy View.
+    </p>
   </article>
 
   <p v-if="error" class="mt-4 text-sm text-red-600 dark:text-red-400">{{ error }}</p>
@@ -391,6 +399,8 @@ const selectedDistrict = ref('')
 const selectedCouncil = ref('')
 const days = ref(90)
 const loading = ref(false)
+const hierarchyLoading = ref(false)
+const hierarchyError = ref('')
 const error = ref('')
 const data = ref<AnalyticsData | null>(null)
 const activeTab = ref<'accepted' | 'rejected' | 'updates' | 'duplicates'>('accepted')
@@ -496,14 +506,37 @@ function onDistrictChange() {
   councils.value = [...set].sort()
 }
 
+interface ApiEnvelope<T> {
+  status?: string
+  message?: string
+  data?: T
+}
+
 async function loadHierarchy() {
-  const response = await auth.apiClient.get<{ data?: Hierarchy }>('/openmrs/location/hierarchy/grouped')
-  hierarchy.value = response.data?.data ?? {}
-  const set = new Set<string>()
-  eachRegion((region) => {
-    if (region.name) set.add(region.name)
-  })
-  regions.value = [...set].sort()
+  hierarchyLoading.value = true
+  hierarchyError.value = ''
+  try {
+    const response = await auth.apiClient.get<ApiEnvelope<Hierarchy>>('/openmrs/location/hierarchy/grouped')
+    hierarchy.value = response.data?.data ?? {}
+    const set = new Set<string>()
+    eachRegion((region) => {
+      const name = region.name?.trim()
+      if (name) set.add(name)
+    })
+    regions.value = [...set].sort()
+    if (!regions.value.length) {
+      hierarchyError.value =
+        'Location hierarchy returned no regions. The location materialized view may be empty or stale.'
+    }
+  } catch (err: unknown) {
+    hierarchy.value = {}
+    regions.value = []
+    hierarchyError.value =
+      (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
+      (err instanceof Error ? err.message : 'Failed to load location hierarchy.')
+  } finally {
+    hierarchyLoading.value = false
+  }
 }
 
 async function runAnalytics(preserveTab = false) {
@@ -549,8 +582,6 @@ function onDuplicateResolved() {
 }
 
 onMounted(() => {
-  loadHierarchy().catch(() => {
-    error.value = 'Failed to load location hierarchy.'
-  })
+  loadHierarchy()
 })
 </script>
