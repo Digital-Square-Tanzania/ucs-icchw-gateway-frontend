@@ -36,8 +36,16 @@
           size="large"
           :loading="rolesLoading"
           required
-          @change="onRoleChange" />
+          @update:model-value="onRoleChange" />
         <Message v-if="rolesError" severity="error" size="small" class="mt-1">{{ rolesError }}</Message>
+        <Message
+          v-else-if="!isCouncilCoordinator"
+          size="small"
+          severity="secondary"
+          variant="simple"
+          class="mt-1">
+          Choose <strong>COUNCIL_COORDINATOR</strong> to assign Region → District → Council.
+        </Message>
       </div>
 
       <template v-if="isCouncilCoordinator">
@@ -56,7 +64,7 @@
                 class="w-full"
                 size="large"
                 :disabled="hierarchyLoading"
-                @change="onRegionChange" />
+                @update:model-value="onRegionChange" />
             </div>
             <div>
               <label for="mgr-district" class="text-sm">District</label>
@@ -68,7 +76,7 @@
                 class="w-full"
                 size="large"
                 :disabled="!managerForm.assignedRegion || hierarchyLoading"
-                @change="onDistrictChange" />
+                @update:model-value="onDistrictChange" />
             </div>
             <div>
               <label for="mgr-council" class="text-sm">Council</label>
@@ -135,7 +143,7 @@
 
 <script setup lang="ts">
 import PageTitle from "@/components/layout/PageTitle.vue";
-import { computed, onMounted, ref } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 import { InputText, Select, Button, Message, Password } from "primevue";
 import ApiClient from "@/utilities/ApiClient";
 import { useAuthStore } from "@/stores/auth";
@@ -173,7 +181,7 @@ const managerForm = ref({
   phoneNumber: "",
   password: "",
   confirmPassword: "",
-  roleId: null as number | null,
+  roleId: null as number | string | null,
   assignedRegion: "",
   assignedDistrict: "",
   assignedCouncil: "",
@@ -185,9 +193,19 @@ const passwordsMismatch = computed(() => {
   return managerForm.value.password !== managerForm.value.confirmPassword;
 });
 
+function selectedManagerRole() {
+  const id = managerForm.value.roleId;
+  if (id == null || id === "") return undefined;
+  return managerRoles.value.find((r) => Number(r.value) === Number(id));
+}
+
 const isCouncilCoordinator = computed(() => {
-  const role = managerRoles.value.find((r) => r.value === managerForm.value.roleId);
-  return role?.roleName === "COUNCIL_COORDINATOR";
+  const role = selectedManagerRole();
+  if (!role) return false;
+  return (
+    role.roleName === "COUNCIL_COORDINATOR" ||
+    role.label.startsWith("COUNCIL_COORDINATOR")
+  );
 });
 
 function eachRegion(fn: (region: Region) => void) {
@@ -201,11 +219,15 @@ function eachRegion(fn: (region: Region) => void) {
 }
 
 async function loadHierarchy() {
+  if (hierarchyLoading.value || regions.value.length > 0) return;
   hierarchyLoading.value = true;
   hierarchyError.value = "";
   try {
-    const response = await apiClient.get<{ data: Hierarchy }>("/openmrs/location/hierarchy/grouped");
-    hierarchy.value = response.data.data ?? {};
+    const response = await apiClient.get<{ status?: string; data?: Hierarchy }>(
+      "/openmrs/location/hierarchy/grouped",
+    );
+    const payload = response.data as { data?: Hierarchy };
+    hierarchy.value = payload?.data ?? (response.data as unknown as Hierarchy) ?? {};
     const set = new Set<string>();
     eachRegion((region) => {
       if (region.name) set.add(region.name);
@@ -259,10 +281,17 @@ function onRoleChange() {
     managerForm.value.assignedRegion = "";
     managerForm.value.assignedDistrict = "";
     managerForm.value.assignedCouncil = "";
-  } else if (!regions.value.length) {
-    loadHierarchy();
+    districts.value = [];
+    councils.value = [];
+    return;
   }
+  void loadHierarchy();
 }
+
+watch(
+  () => managerForm.value.roleId,
+  () => onRoleChange(),
+);
 
 async function loadManagerRoles() {
   rolesLoading.value = true;
@@ -290,7 +319,7 @@ async function loadManagerRoles() {
 onMounted(async () => {
   try {
     await apiClient.get("/auth/me");
-    await loadManagerRoles();
+    await Promise.all([loadManagerRoles(), loadHierarchy()]);
   } catch (error) {
     if ((error as { response?: { status?: number } }).response?.status === 401) {
       authStore.logout(router, toast);
