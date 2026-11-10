@@ -87,7 +87,7 @@
         </div>
       </template>
 
-      <div class="md:col-span-2">
+      <div>
         <label for="mgr-password">Password</label>
         <Password
           id="mgr-password"
@@ -96,8 +96,27 @@
           inputClass="w-full"
           toggleMask
           :feedback="true"
-          required />
-        <Message size="small" severity="secondary" variant="simple" class="mt-1">
+          required
+          @blur="passwordTouched = true" />
+      </div>
+      <div>
+        <label for="mgr-password-confirm">Confirm password</label>
+        <Password
+          id="mgr-password-confirm"
+          v-model="managerForm.confirmPassword"
+          class="w-full"
+          inputClass="w-full"
+          toggleMask
+          :feedback="false"
+          required
+          :invalid="passwordsMismatch"
+          @blur="confirmPasswordTouched = true" />
+        <Message v-if="passwordsMismatch" severity="error" size="small" class="mt-1">
+          Passwords do not match.
+        </Message>
+      </div>
+      <div class="md:col-span-2">
+        <Message size="small" severity="secondary" variant="simple">
           Uppercase, lowercase, number, and special character required.
         </Message>
       </div>
@@ -143,6 +162,8 @@ const districts = ref<string[]>([]);
 const councils = ref<string[]>([]);
 const hierarchyLoading = ref(false);
 const hierarchyError = ref("");
+const passwordTouched = ref(false);
+const confirmPasswordTouched = ref(false);
 
 const managerForm = ref({
   firstName: "",
@@ -151,10 +172,17 @@ const managerForm = ref({
   email: "",
   phoneNumber: "",
   password: "",
+  confirmPassword: "",
   roleId: null as number | null,
   assignedRegion: "",
   assignedDistrict: "",
   assignedCouncil: "",
+});
+
+const passwordsMismatch = computed(() => {
+  if (!passwordTouched.value && !confirmPasswordTouched.value) return false;
+  if (!managerForm.value.confirmPassword) return false;
+  return managerForm.value.password !== managerForm.value.confirmPassword;
 });
 
 const isCouncilCoordinator = computed(() => {
@@ -286,6 +314,27 @@ const submitManagerForm = async () => {
       });
       return;
     }
+  }
+
+  passwordTouched.value = true;
+  confirmPasswordTouched.value = true;
+  if (!managerForm.value.password || !managerForm.value.confirmPassword) {
+    toast.add({
+      severity: "warn",
+      summary: "Password required",
+      detail: "Enter and confirm the password.",
+      life: 3000,
+    });
+    return;
+  }
+  if (managerForm.value.password !== managerForm.value.confirmPassword) {
+    toast.add({
+      severity: "error",
+      summary: "Passwords do not match",
+      detail: "Confirm password must match the password field.",
+      life: 3000,
+    });
+    return;
   }
 
   authStore.loading = true;
