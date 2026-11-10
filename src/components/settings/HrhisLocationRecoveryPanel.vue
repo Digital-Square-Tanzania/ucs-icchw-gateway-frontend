@@ -8,6 +8,15 @@
     </p>
 
     <div class="mt-4 rounded-lg border border-gray-200 dark:border-ucs-800 bg-gray-50 dark:bg-ucs-950/40 p-4">
+      <CouncilHierarchyHero
+        v-if="councilLocked"
+        class="mb-4"
+        :region="selectedRegion"
+        :district="selectedDistrict"
+        :council="selectedCouncil"
+        subtitle="Scan and recover HRHIS register failures for location codes within your assigned council." />
+
+      <template v-if="!councilLocked">
       <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">
         Pick Region → District → Council, then scan. Only location-related failures are listed; NINs that later
         succeeded are excluded.
@@ -46,6 +55,7 @@
           </select>
         </div>
       </div>
+      </template>
       <div class="mt-3 flex flex-wrap items-end gap-3">
         <div>
           <label class="block text-xs text-gray-600 dark:text-gray-300 mb-1">Lookback</label>
@@ -175,10 +185,20 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useToast } from 'primevue/usetoast'
 import { useAuthStore } from '@/stores/auth'
 import { useSyncStore, type HrhisRecoveryProgress } from '@/stores/sync'
+import CouncilHierarchyHero from '@/components/layout/CouncilHierarchyHero.vue'
+
+const props = withDefaults(
+  defineProps<{
+    councilLocked?: boolean
+    fixedCouncil?: { region: string; district: string; council: string } | null
+    autoScanWhenLocked?: boolean
+  }>(),
+  { councilLocked: false, fixedCouncil: null, autoScanWhenLocked: false },
+)
 
 interface ApiEnvelope<T> {
   status?: string
@@ -246,6 +266,21 @@ interface RecoverResult {
 const auth = useAuthStore()
 const syncStore = useSyncStore()
 const toast = useToast()
+
+const councilLocked = computed(() => props.councilLocked)
+
+function applyFixedCouncil() {
+  if (!props.fixedCouncil?.council) return
+  selectedRegion.value = props.fixedCouncil.region
+  selectedDistrict.value = props.fixedCouncil.district
+  selectedCouncil.value = props.fixedCouncil.council
+}
+
+watch(
+  () => props.fixedCouncil,
+  () => applyFixedCouncil(),
+  { deep: true, immediate: true },
+)
 
 const hierarchy = ref<Hierarchy>({})
 const regions = ref<string[]>([])
@@ -562,8 +597,15 @@ async function runRecoverOne(row: FailureRow) {
   }
 }
 
-onMounted(() => {
-  loadHierarchy()
+onMounted(async () => {
+  if (props.councilLocked && props.fixedCouncil?.council) {
+    applyFixedCouncil()
+    if (props.autoScanWhenLocked) {
+      await runScan()
+    }
+  } else {
+    void loadHierarchy()
+  }
   syncStore.initWebSocket()
   unsubscribeRecovery = syncStore.onHrhisRecoveryEvent((event) => {
     if (activeJobId.value && event.jobId && event.jobId !== activeJobId.value) return
