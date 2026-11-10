@@ -4,7 +4,8 @@
       <div>
         <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Activations by category</h3>
         <p class="text-xs text-gray-500 dark:text-gray-400">
-          Open slugs need confirmation before resend. Resend count is shown per account.
+          One row per CHW (not per old slug). Resends column is total resends across all slugs for that account.
+          Placeholder emails (e.g. unknown@example.com) are hidden from actionable tabs.
         </p>
       </div>
       <button
