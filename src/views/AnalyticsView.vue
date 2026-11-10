@@ -4,46 +4,55 @@
     subtext="Council-scoped HRHIS register payload analysis from api_logs" />
 
   <article class="rounded-xl border border-gray-200 dark:border-ucs-800 bg-white dark:bg-ucs-900/40 p-5 shadow-sm">
-    <h2 class="text-base font-semibold text-gray-900 dark:text-white">Council scope</h2>
-    <p class="mt-2 text-sm text-gray-600 dark:text-gray-300">
-      Pick Region → District → Council, then run analytics. Data covers
-      <code class="text-xs">POST /chw/register</code> GatewayResponder rows (one row per HTTP
-      attempt) plus internal update action logs.
-    </p>
+    <CouncilHierarchyHero
+      v-if="councilLocked"
+      :region="selectedRegion"
+      :district="selectedDistrict"
+      :council="selectedCouncil"
+      subtitle="HRHIS register analytics, incoming volume, failures, and recoveries for your council." />
 
-    <div class="mt-4 grid gap-3 sm:grid-cols-3">
-      <div>
-        <label class="block text-xs text-gray-600 dark:text-gray-300 mb-1">Region</label>
-        <select
-          v-model="selectedRegion"
-          class="w-full rounded-lg border border-gray-300 dark:border-ucs-700 bg-white dark:bg-ucs-900 px-2 py-1.5 text-sm"
-          @change="onRegionChange">
-          <option value="">Select region</option>
-          <option v-for="r in regions" :key="r" :value="r">{{ r }}</option>
-        </select>
+    <template v-else>
+      <h2 class="text-base font-semibold text-gray-900 dark:text-white">Council scope</h2>
+      <p class="mt-2 text-sm text-gray-600 dark:text-gray-300">
+        Pick Region → District → Council, then run analytics. Data covers
+        <code class="text-xs">POST /chw/register</code> GatewayResponder rows (one row per HTTP
+        attempt) plus internal update action logs.
+      </p>
+
+      <div class="mt-4 grid gap-3 sm:grid-cols-3">
+        <div>
+          <label class="block text-xs text-gray-600 dark:text-gray-300 mb-1">Region</label>
+          <select
+            v-model="selectedRegion"
+            class="w-full rounded-lg border border-gray-300 dark:border-ucs-700 bg-white dark:bg-ucs-900 px-2 py-1.5 text-sm"
+            @change="onRegionChange">
+            <option value="">Select region</option>
+            <option v-for="r in regions" :key="r" :value="r">{{ r }}</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs text-gray-600 dark:text-gray-300 mb-1">District</label>
+          <select
+            v-model="selectedDistrict"
+            :disabled="!selectedRegion"
+            class="w-full rounded-lg border border-gray-300 dark:border-ucs-700 bg-white dark:bg-ucs-900 px-2 py-1.5 text-sm disabled:opacity-60"
+            @change="onDistrictChange">
+            <option value="">Select district</option>
+            <option v-for="d in districts" :key="d" :value="d">{{ d }}</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs text-gray-600 dark:text-gray-300 mb-1">Council</label>
+          <select
+            v-model="selectedCouncil"
+            :disabled="!selectedDistrict"
+            class="w-full rounded-lg border border-gray-300 dark:border-ucs-700 bg-white dark:bg-ucs-900 px-2 py-1.5 text-sm disabled:opacity-60">
+            <option value="">Select council</option>
+            <option v-for="c in councils" :key="c" :value="c">{{ c }}</option>
+          </select>
+        </div>
       </div>
-      <div>
-        <label class="block text-xs text-gray-600 dark:text-gray-300 mb-1">District</label>
-        <select
-          v-model="selectedDistrict"
-          :disabled="!selectedRegion"
-          class="w-full rounded-lg border border-gray-300 dark:border-ucs-700 bg-white dark:bg-ucs-900 px-2 py-1.5 text-sm disabled:opacity-60"
-          @change="onDistrictChange">
-          <option value="">Select district</option>
-          <option v-for="d in districts" :key="d" :value="d">{{ d }}</option>
-        </select>
-      </div>
-      <div>
-        <label class="block text-xs text-gray-600 dark:text-gray-300 mb-1">Council</label>
-        <select
-          v-model="selectedCouncil"
-          :disabled="!selectedDistrict"
-          class="w-full rounded-lg border border-gray-300 dark:border-ucs-700 bg-white dark:bg-ucs-900 px-2 py-1.5 text-sm disabled:opacity-60">
-          <option value="">Select council</option>
-          <option v-for="c in councils" :key="c" :value="c">{{ c }}</option>
-        </select>
-      </div>
-    </div>
+    </template>
 
     <div class="mt-3 flex flex-wrap items-end gap-3">
       <div>
@@ -66,14 +75,16 @@
         {{ loading ? 'Running…' : 'Run analytics' }}
       </button>
     </div>
-    <p v-if="hierarchyLoading" class="mt-3 text-xs text-gray-500 dark:text-gray-400">Loading regions…</p>
-    <p v-else-if="hierarchyError" class="mt-3 text-sm text-red-600 dark:text-red-400">{{ hierarchyError }}</p>
-    <p
-      v-else-if="!regions.length"
-      class="mt-3 text-sm text-amber-700 dark:text-amber-300">
-      No regions loaded. Ask an admin to run Settings → Advanced → Sync Locations (full), then Refresh Location
-      Hierarchy View.
-    </p>
+    <template v-if="!councilLocked">
+      <p v-if="hierarchyLoading" class="mt-3 text-xs text-gray-500 dark:text-gray-400">Loading regions…</p>
+      <p v-else-if="hierarchyError" class="mt-3 text-sm text-red-600 dark:text-red-400">{{ hierarchyError }}</p>
+      <p
+        v-else-if="!regions.length"
+        class="mt-3 text-sm text-amber-700 dark:text-amber-300">
+        No regions loaded. Ask an admin to run Settings → Advanced → Sync Locations (full), then Refresh Location
+        Hierarchy View.
+      </p>
+    </template>
   </article>
 
   <p v-if="error" class="mt-4 text-sm text-red-600 dark:text-red-400">{{ error }}</p>
@@ -275,6 +286,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, ref } from 'vue'
 import PageTitle from '@/components/layout/PageTitle.vue'
+import CouncilHierarchyHero from '@/components/layout/CouncilHierarchyHero.vue'
 import DuplicateResolutionDialog from '@/components/dialogs/DuplicateResolutionDialog.vue'
 import { useAuthStore } from '@/stores/auth'
 
@@ -389,6 +401,8 @@ interface AnalyticsData {
 }
 
 const auth = useAuthStore()
+
+const councilLocked = computed(() => auth.isCouncilCoordinator && Boolean(auth.councilScope?.council))
 
 const hierarchy = ref<Hierarchy>({})
 const regions = ref<string[]>([])
@@ -581,7 +595,20 @@ function onDuplicateResolved() {
   if (selectedCouncil.value) runAnalytics(true)
 }
 
-onMounted(() => {
-  loadHierarchy()
+function applyCoordinatorCouncil() {
+  const scope = auth.councilScope
+  if (!scope?.council) return
+  selectedRegion.value = scope.region
+  selectedDistrict.value = scope.district
+  selectedCouncil.value = scope.council
+}
+
+onMounted(async () => {
+  if (councilLocked.value) {
+    applyCoordinatorCouncil()
+    await runAnalytics()
+    return
+  }
+  await loadHierarchy()
 })
 </script>

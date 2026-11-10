@@ -24,7 +24,9 @@
     </div>
 
     <!-- Location filter -->
-    <div class="rounded-xl border border-gray-200 dark:border-ucs-800 bg-gray-50 dark:bg-ucs-900/30 p-4">
+    <div
+      v-if="!councilLocked"
+      class="rounded-xl border border-gray-200 dark:border-ucs-800 bg-gray-50 dark:bg-ucs-900/30 p-4">
       <h3 class="text-sm font-semibold text-gray-700 dark:text-ucs-200 mb-1">Resend location</h3>
       <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">
         Pick Region → District → Council to scope metrics and enable resends. Batches target that council only.
@@ -113,7 +115,7 @@
     </div>
 
     <!-- Scheduler -->
-    <div class="rounded-xl border border-gray-200 dark:border-ucs-800 bg-white dark:bg-ucs-900/40 p-4">
+    <div v-if="showScheduler" class="rounded-xl border border-gray-200 dark:border-ucs-800 bg-white dark:bg-ucs-900/40 p-4">
       <h3 class="text-sm font-semibold text-gray-900 dark:text-white mb-3">Daily Batch Scheduler</h3>
       <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <div>
@@ -192,9 +194,18 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, reactive, ref } from 'vue'
+import { onMounted, reactive, ref, watch } from 'vue'
 import { useToast } from 'primevue/usetoast'
 import { useAuthStore } from '@/stores/auth'
+
+const props = withDefaults(
+  defineProps<{
+    councilLocked?: boolean
+    fixedCouncil?: { region: string; district: string; council: string } | null
+    showScheduler?: boolean
+  }>(),
+  { councilLocked: false, fixedCouncil: null, showScheduler: true },
+)
 
 const auth = useAuthStore()
 const toast = useToast()
@@ -447,9 +458,29 @@ function notifyError(summary: string, error: unknown) {
   toast.add({ severity: 'error', summary, detail: message, life: 5000 })
 }
 
+function applyFixedCouncil() {
+  if (!props.fixedCouncil?.council) return
+  selectedRegion.value = props.fixedCouncil.region
+  selectedDistrict.value = props.fixedCouncil.district
+  selectedCouncil.value = props.fixedCouncil.council
+  void loadStats()
+}
+
+watch(
+  () => props.fixedCouncil,
+  () => applyFixedCouncil(),
+  { deep: true },
+)
+
 onMounted(() => {
-  loadStats()
-  loadMatrix()
-  loadHierarchy()
+  if (props.councilLocked && props.fixedCouncil) {
+    applyFixedCouncil()
+    void loadMatrix()
+    return
+  }
+  void loadStats()
+  void loadMatrix()
+  void loadHierarchy()
+  applyFixedCouncil()
 })
 </script>

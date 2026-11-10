@@ -13,12 +13,17 @@ import AddManagerUserView from '@/views/AddManagerUserView.vue'
 import AddDhis2UserView from '@/views/AddDhis2UserView.vue'
 import SettingsView from '@/views/SettingsView.vue'
 import AnalyticsView from '@/views/AnalyticsView.vue'
-import { ANALYTICS_ROLES, SETTINGS_ROLES, type RoleName } from '@/constants/roles'
+import { ANALYTICS_ROLES, type RoleName } from '@/constants/roles'
 
 const routes = [
   {
     path: '/',
-    redirect: '/dashboard', // Redirect base URL to Dashboard
+    name: 'Home',
+    redirect: () => {
+      const auth = useAuthStore()
+      if (!auth.isAuthenticated) return '/login'
+      return auth.homePath
+    },
   },
   {
     path: '/login',
@@ -64,7 +69,7 @@ const routes = [
     path: '/settings',
     name: 'Settings',
     component: SettingsView,
-    meta: { requiresAuth: true, roles: SETTINGS_ROLES as RoleName[] },
+    meta: { requiresAuth: true, requiresSettingsAccess: true },
   },
   {
     path: '/analytics',
@@ -93,10 +98,23 @@ router.beforeEach(async (to, from, next) => {
     await auth.fetchProfile()
   }
 
+  if (to.meta.requiresSettingsAccess) {
+    if (!auth.permissions.length) await auth.fetchProfile()
+    if (!auth.hasAnySettingsAccess) {
+      next('/dashboard')
+      return
+    }
+  }
+
   const allowedRoles = to.meta.roles as RoleName[] | undefined
   if (allowedRoles?.length) {
-    if (!auth.userRole || !allowedRoles.includes(auth.userRole as RoleName)) {
-      next('/dashboard')
+    if (to.name === 'Analytics' && auth.canAccessAnalytics) {
+      next()
+      return
+    }
+    const role = auth.userRole
+    if (!role || !allowedRoles.includes(role as RoleName)) {
+      next(auth.homePath)
       return
     }
   }

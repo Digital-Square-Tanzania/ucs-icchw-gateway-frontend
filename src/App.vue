@@ -15,8 +15,8 @@
     <!-- Main links go here -->
     <div id="right" class="flex flex-row justify-between w-1/3" v-if="auth.isAuthenticated">
       <div id="links-area" class="p-5">
-        <MainLink route="/dashboard" title="Dashboard" />
-        <MainLink route="/users" title="Users" />
+        <MainLink v-if="auth.canAccessNav('/dashboard')" route="/dashboard" title="Dashboard" />
+        <MainLink v-if="auth.canAccessNav('/users')" route="/users" title="Users" />
         <MainLink v-if="auth.canAccessSettings" route="/settings" title="Settings" />
         <MainLink v-if="auth.canAccessAnalytics" route="/analytics" title="Analytics" />
       </div>
@@ -37,6 +37,7 @@
   }">
     <TransparentCover v-if="auth.loading" />
     <Toast />
+    <ConfirmDialog />
     <RouterView :key="route.fullPath" />
     <p
       v-if="route.path !== '/login'"
@@ -52,6 +53,7 @@ import { useRouter, useRoute, RouterView } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useToast } from 'primevue/usetoast'
 import Toast from 'primevue/toast'
+import ConfirmDialog from 'primevue/confirmdialog'
 import { onMounted, watch } from 'vue'
 import MainLink from './components/layout/MainLink.vue'
 import TransparentCover from './components/layout/TransparentCover.vue'

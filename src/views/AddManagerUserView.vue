@@ -22,6 +22,9 @@
       <div>
         <label for="mgr-phone">Phone (optional)</label>
         <InputText id="mgr-phone" v-model="managerForm.phoneNumber" class="w-full" size="large" />
+        <Message size="small" severity="secondary" variant="simple" class="mt-1">
+          Must be unique per manager account (e.g. +2557XXXXXXXX). Leave empty if unsure.
+        </Message>
       </div>
       <div>
         <label for="mgr-role">Manager role</label>

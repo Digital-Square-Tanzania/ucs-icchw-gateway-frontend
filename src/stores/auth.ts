@@ -3,7 +3,12 @@ import { AxiosError } from 'axios'
 import { useRouter } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
 import ApiClient from '@/utilities/ApiClient'
-import { canAccessSettings, canAccessAnalytics, isUcsDeveloper } from '@/constants/roles'
+import { canAccessAnalytics, isUcsDeveloper, Role } from '@/constants/roles'
+import {
+  hasAnySettingsTabAccess,
+  hasSettingsTabAccess,
+  type SettingsTabId,
+} from '@/utils/settingsTabPermissions'
 import { getRoleFromToken } from '@/utilities/jwt'
 
 const API_URL = import.meta.env.VITE_API_URL
@@ -16,6 +21,11 @@ export interface AuthUser {
   role: string
   joinDate?: string
   lastLogin?: string
+  assignedRegion?: string | null
+  assignedDistrict?: string | null
+  assignedCouncil?: string | null
+  permissions?: string[]
+  menus?: Array<{ id: string; label: string; path: string; icon: string | null; order: number }>
 }
 
 export const useAuthStore = defineStore('auth', {
@@ -23,6 +33,8 @@ export const useAuthStore = defineStore('auth', {
     accessToken: localStorage.getItem('accessToken') || '',
     refreshToken: localStorage.getItem('refreshToken') || '',
     user: null as AuthUser | null,
+    permissions: [] as string[],
+    menus: [] as AuthUser['menus'],
     loading: false,
     error: '' as string | null,
   }),
@@ -31,10 +43,60 @@ export const useAuthStore = defineStore('auth', {
     // Prefer the fetched profile role; fall back to the role claim in the JWT
     // so UI gating works without depending on the /auth/me round-trip.
     userRole: (state) => state.user?.role ?? getRoleFromToken(state.accessToken),
-    canAccessSettings: (state) =>
-      canAccessSettings(state.user?.role ?? getRoleFromToken(state.accessToken)),
-    canAccessAnalytics: (state) =>
-      canAccessAnalytics(state.user?.role ?? getRoleFromToken(state.accessToken)),
+    councilScope: (state) => {
+      const u = state.user
+      if (!u?.assignedCouncil) return null
+      return {
+        region: u.assignedRegion || '',
+        district: u.assignedDistrict || '',
+        council: u.assignedCouncil,
+      }
+    },
+    isCouncilCoordinator: (state) => state.user?.role === Role.COUNCIL_COORDINATOR,
+    hasPermission: (state) => (code: string) =>
+      state.permissions.includes('settings:manage') || state.permissions.includes(code),
+    canAccessSettingsTab: (state) => (tab: SettingsTabId) => {
+      if (hasSettingsTabAccess(state.permissions, tab)) return true
+      const role = state.user?.role ?? getRoleFromToken(state.accessToken)
+      if (role === Role.UCS_DEVELOPER || role === Role.MOH_ADMIN) return true
+      if (role === Role.COUNCIL_COORDINATOR && (tab === 'hrhis-reg' || tab === 'activations')) return true
+      return false
+    },
+    hasAnySettingsAccess: (state) => {
+      if (hasAnySettingsTabAccess(state.permissions)) return true
+      const role = state.user?.role ?? getRoleFromToken(state.accessToken)
+      return role === Role.UCS_DEVELOPER || role === Role.MOH_ADMIN || role === Role.COUNCIL_COORDINATOR
+    },
+    canAccessSettings: (state) => {
+      if (hasAnySettingsTabAccess(state.permissions)) return true
+      const role = state.user?.role ?? getRoleFromToken(state.accessToken)
+      return role === Role.UCS_DEVELOPER || role === Role.MOH_ADMIN || role === Role.COUNCIL_COORDINATOR
+    },
+    canAccessAnalytics: (state) => {
+      if (state.permissions.includes('menu:analytics') || state.permissions.includes('settings:manage')) {
+        return true
+      }
+      const role = state.user?.role ?? getRoleFromToken(state.accessToken)
+      return canAccessAnalytics(role) || role === Role.COUNCIL_COORDINATOR
+    },
+    /** Default route after login or visiting `/`. */
+    homePath: (state) => {
+      const role = state.user?.role ?? getRoleFromToken(state.accessToken)
+      if (role === Role.COUNCIL_COORDINATOR) return '/analytics'
+      if (
+        state.permissions.includes('menu:analytics') &&
+        !state.permissions.includes('menu:dashboard') &&
+        !state.permissions.includes('settings:manage')
+      ) {
+        return '/analytics'
+      }
+      return '/dashboard'
+    },
+    canAccessNav: (state) => (path: string) => {
+      if (state.permissions.includes('settings:manage')) return true
+      if (!state.menus?.length) return true
+      return state.menus.some((m) => m.path === path)
+    },
     isUcsDeveloper: (state) =>
       isUcsDeveloper(state.user?.role ?? getRoleFromToken(state.accessToken)),
     apiClient: (state) => new ApiClient(state.accessToken),
@@ -134,6 +196,8 @@ export const useAuthStore = defineStore('auth', {
         const response = await this.apiClient.get<ProfileResponse>(`${API_URL}/auth/me`)
         if (response.data.status === 'success' && response.data.data) {
           this.user = response.data.data
+          this.permissions = response.data.data.permissions ?? []
+          this.menus = response.data.data.menus ?? []
         }
       } catch {
         this.user = null

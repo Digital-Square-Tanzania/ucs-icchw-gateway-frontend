@@ -3,6 +3,7 @@ import '@/assets/main.css'
 import { createApp } from 'vue'
 import PrimeVue from 'primevue/config'
 import ToastService from 'primevue/toastservice'
+import ConfirmationService from 'primevue/confirmationservice'
 import Aura from '@primeuix/themes/aura'
 import { createPinia } from 'pinia'
 
@@ -19,6 +20,7 @@ app.use(PrimeVue, {
 
 // app.use(PrimeVue, { unstyled: true })
 app.use(ToastService)
+app.use(ConfirmationService)
 app.use(createPinia())
 app.use(router)
 

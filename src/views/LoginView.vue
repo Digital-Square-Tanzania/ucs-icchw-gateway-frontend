@@ -57,14 +57,14 @@ const toast = useToast()
 // Redirect if already logged in
 onMounted(() => {
   if (auth.isAuthenticated) {
-    router.push('/dashboard');
+    router.push(auth.homePath)
   }
 });
 
 const handleLogin = async () => {
   await auth.login(email.value, password.value, toast)
   if (auth.isAuthenticated) {
-    router.push('/dashboard')
+    router.push(auth.homePath)
   } else if (auth.error) {
     console.log('danger', 'Error', auth.error)
   }
