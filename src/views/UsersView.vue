@@ -198,6 +198,7 @@ const managerColumns = [
   { field: "middleName", header: "Middle Name" },
   { field: "lastName", header: "Last Name" },
   { field: "role", header: "Role" },
+  { field: "councilAssignment", header: "Council" },
   { field: "phoneNumber", header: "Phone" },
 ];
 
@@ -288,12 +289,16 @@ function mapUsers(raw: unknown[], activeSystem: SystemCode) {
         row.roleName != null && row.roleName !== ""
           ? String(row.roleName)
           : managerRoleName(row.role);
+      const councilAssignment = row.assignedCouncil
+        ? [row.assignedRegion, row.assignedDistrict, row.assignedCouncil].filter(Boolean).join(" · ")
+        : "—";
       return {
         email: row.email,
         firstName: row.firstName,
         middleName: row.middleName || "—",
         lastName: row.lastName,
         role: roleLabel,
+        councilAssignment,
         phoneNumber: row.phoneNumber,
       };
     }

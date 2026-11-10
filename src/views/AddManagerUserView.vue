@@ -35,9 +35,58 @@
           class="w-full"
           size="large"
           :loading="rolesLoading"
-          required />
+          required
+          @change="onRoleChange" />
         <Message v-if="rolesError" severity="error" size="small" class="mt-1">{{ rolesError }}</Message>
       </div>
+
+      <template v-if="isCouncilCoordinator">
+        <div class="md:col-span-2 rounded-lg border border-ucs-200 dark:border-ucs-700 bg-ucs-50/50 dark:bg-ucs-900/30 p-4">
+          <p class="text-xs font-medium uppercase tracking-wide text-gray-600 dark:text-gray-300 mb-3">
+            Council assignment
+          </p>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label for="mgr-region" class="text-sm">Region</label>
+              <Select
+                id="mgr-region"
+                v-model="managerForm.assignedRegion"
+                :options="regions"
+                placeholder="Select region"
+                class="w-full"
+                size="large"
+                :disabled="hierarchyLoading"
+                @change="onRegionChange" />
+            </div>
+            <div>
+              <label for="mgr-district" class="text-sm">District</label>
+              <Select
+                id="mgr-district"
+                v-model="managerForm.assignedDistrict"
+                :options="districts"
+                placeholder="Select district"
+                class="w-full"
+                size="large"
+                :disabled="!managerForm.assignedRegion || hierarchyLoading"
+                @change="onDistrictChange" />
+            </div>
+            <div>
+              <label for="mgr-council" class="text-sm">Council</label>
+              <Select
+                id="mgr-council"
+                v-model="managerForm.assignedCouncil"
+                :options="councils"
+                placeholder="Select council"
+                class="w-full"
+                size="large"
+                :disabled="!managerForm.assignedDistrict || hierarchyLoading" />
+            </div>
+          </div>
+          <p v-if="hierarchyError" class="mt-2 text-sm text-red-600 dark:text-red-400">{{ hierarchyError }}</p>
+          <p v-else-if="hierarchyLoading" class="mt-2 text-xs text-gray-500">Loading location hierarchy…</p>
+        </div>
+      </template>
+
       <div class="md:col-span-2">
         <label for="mgr-password">Password</label>
         <Password
@@ -67,21 +116,33 @@
 
 <script setup lang="ts">
 import PageTitle from "@/components/layout/PageTitle.vue";
-import { onMounted, ref } from "vue";
+import { computed, onMounted, ref } from "vue";
 import { InputText, Select, Button, Message, Password } from "primevue";
 import ApiClient from "@/utilities/ApiClient";
 import { useAuthStore } from "@/stores/auth";
 import { useToast } from "primevue/usetoast";
 import { useRouter } from "vue-router";
 
+type Council = { name: string }
+type District = { name: string; councils?: Record<string, Council> }
+type Region = { name: string; districts?: Record<string, District> }
+type Hierarchy = Record<string, { zones?: Record<string, { regions?: Record<string, Region> }> }>
+
 const authStore = useAuthStore();
 const apiClient = new ApiClient(authStore.accessToken);
 const toast = useToast();
 const router = useRouter();
 
-const managerRoles = ref<Array<{ label: string; value: number }>>([]);
+const managerRoles = ref<Array<{ label: string; value: number; roleName: string }>>([]);
 const rolesLoading = ref(false);
 const rolesError = ref<string | null>(null);
+
+const hierarchy = ref<Hierarchy>({});
+const regions = ref<string[]>([]);
+const districts = ref<string[]>([]);
+const councils = ref<string[]>([]);
+const hierarchyLoading = ref(false);
+const hierarchyError = ref("");
 
 const managerForm = ref({
   firstName: "",
@@ -91,7 +152,89 @@ const managerForm = ref({
   phoneNumber: "",
   password: "",
   roleId: null as number | null,
+  assignedRegion: "",
+  assignedDistrict: "",
+  assignedCouncil: "",
 });
+
+const isCouncilCoordinator = computed(() => {
+  const role = managerRoles.value.find((r) => r.value === managerForm.value.roleId);
+  return role?.roleName === "COUNCIL_COORDINATOR";
+});
+
+function eachRegion(fn: (region: Region) => void) {
+  for (const country of Object.values(hierarchy.value)) {
+    for (const zone of Object.values(country.zones ?? {})) {
+      for (const region of Object.values(zone.regions ?? {})) {
+        fn(region);
+      }
+    }
+  }
+}
+
+async function loadHierarchy() {
+  hierarchyLoading.value = true;
+  hierarchyError.value = "";
+  try {
+    const response = await apiClient.get<{ data: Hierarchy }>("/openmrs/location/hierarchy/grouped");
+    hierarchy.value = response.data.data ?? {};
+    const set = new Set<string>();
+    eachRegion((region) => {
+      if (region.name) set.add(region.name);
+    });
+    regions.value = [...set].sort();
+    if (!regions.value.length) {
+      hierarchyError.value =
+        "No regions in hierarchy. Sync locations and refresh the hierarchy view in Settings.";
+    }
+  } catch (error) {
+    console.error("Failed to load hierarchy:", error);
+    hierarchyError.value = "Could not load region / district / council list.";
+  } finally {
+    hierarchyLoading.value = false;
+  }
+}
+
+function onRegionChange() {
+  managerForm.value.assignedDistrict = "";
+  managerForm.value.assignedCouncil = "";
+  districts.value = [];
+  councils.value = [];
+  const set = new Set<string>();
+  eachRegion((region) => {
+    if (region.name !== managerForm.value.assignedRegion) return;
+    for (const d of Object.values(region.districts ?? {})) {
+      if (d.name) set.add(d.name);
+    }
+  });
+  districts.value = [...set].sort();
+}
+
+function onDistrictChange() {
+  managerForm.value.assignedCouncil = "";
+  councils.value = [];
+  const set = new Set<string>();
+  eachRegion((region) => {
+    if (region.name !== managerForm.value.assignedRegion) return;
+    for (const d of Object.values(region.districts ?? {})) {
+      if (d.name !== managerForm.value.assignedDistrict) continue;
+      for (const c of Object.values(d.councils ?? {})) {
+        if (c.name) set.add(c.name);
+      }
+    }
+  });
+  councils.value = [...set].sort();
+}
+
+function onRoleChange() {
+  if (!isCouncilCoordinator.value) {
+    managerForm.value.assignedRegion = "";
+    managerForm.value.assignedDistrict = "";
+    managerForm.value.assignedCouncil = "";
+  } else if (!regions.value.length) {
+    loadHierarchy();
+  }
+}
 
 async function loadManagerRoles() {
   rolesLoading.value = true;
@@ -103,6 +246,7 @@ async function loadManagerRoles() {
     managerRoles.value = (rolesResponse.data.data || []).map((r) => ({
       label: r.description ? `${r.name} — ${r.description}` : r.name,
       value: r.id,
+      roleName: r.name,
     }));
     if (!managerRoles.value.length) {
       rolesError.value = "No manager roles returned. Deploy latest backend (GET /user/roles).";
@@ -132,9 +276,21 @@ const submitManagerForm = async () => {
     toast.add({ severity: "warn", summary: "Role required", detail: "Select a role.", life: 3000 });
     return;
   }
+  if (isCouncilCoordinator.value) {
+    if (!managerForm.value.assignedRegion || !managerForm.value.assignedDistrict || !managerForm.value.assignedCouncil) {
+      toast.add({
+        severity: "warn",
+        summary: "Council required",
+        detail: "Select region, district, and council for a council coordinator.",
+        life: 4000,
+      });
+      return;
+    }
+  }
+
   authStore.loading = true;
   try {
-    await apiClient.post("/user", {
+    const payload: Record<string, unknown> = {
       firstName: managerForm.value.firstName,
       middleName: managerForm.value.middleName || undefined,
       lastName: managerForm.value.lastName,
@@ -142,7 +298,13 @@ const submitManagerForm = async () => {
       phoneNumber: managerForm.value.phoneNumber || undefined,
       password: managerForm.value.password,
       roleId: managerForm.value.roleId,
-    });
+    };
+    if (isCouncilCoordinator.value) {
+      payload.assignedRegion = managerForm.value.assignedRegion;
+      payload.assignedDistrict = managerForm.value.assignedDistrict;
+      payload.assignedCouncil = managerForm.value.assignedCouncil;
+    }
+    await apiClient.post("/user", payload);
     toast.add({
       severity: "success",
       summary: "User created",
