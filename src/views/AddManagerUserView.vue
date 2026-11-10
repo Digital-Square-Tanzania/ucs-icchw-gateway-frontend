@@ -36,10 +36,10 @@
           size="large"
           :loading="rolesLoading"
           required
-          @update:model-value="onRoleChange" />
+          @update:model-value="onRoleIdChange" />
         <Message v-if="rolesError" severity="error" size="small" class="mt-1">{{ rolesError }}</Message>
         <Message
-          v-else-if="!isCouncilCoordinator"
+          v-else-if="!showCouncilAssignment"
           size="small"
           severity="secondary"
           variant="simple"
@@ -48,7 +48,7 @@
         </Message>
       </div>
 
-      <template v-if="isCouncilCoordinator">
+      <template v-if="showCouncilAssignment">
         <div class="md:col-span-2 rounded-lg border border-ucs-200 dark:border-ucs-700 bg-ucs-50/50 dark:bg-ucs-900/30 p-4">
           <p class="text-xs font-medium uppercase tracking-wide text-gray-600 dark:text-gray-300 mb-3">
             Council assignment
@@ -193,20 +193,33 @@ const passwordsMismatch = computed(() => {
   return managerForm.value.password !== managerForm.value.confirmPassword;
 });
 
-function selectedManagerRole() {
-  const id = managerForm.value.roleId;
-  if (id == null || id === "") return undefined;
-  return managerRoles.value.find((r) => Number(r.value) === Number(id));
+function roleForId(roleId: number | string | null | undefined) {
+  if (roleId == null || roleId === "") return undefined;
+  const id = Number(roleId);
+  if (!Number.isFinite(id)) return undefined;
+  return managerRoles.value.find((r) => Number(r.value) === id);
 }
 
-const isCouncilCoordinator = computed(() => {
-  const role = selectedManagerRole();
+function isCouncilCoordinatorRole(roleId: number | string | null | undefined) {
+  const role = roleForId(roleId);
   if (!role) return false;
   return (
     role.roleName === "COUNCIL_COORDINATOR" ||
     role.label.startsWith("COUNCIL_COORDINATOR")
   );
-});
+}
+
+const showCouncilAssignment = computed(() => isCouncilCoordinatorRole(managerForm.value.roleId));
+
+function onRoleIdChange(value: number | string | null) {
+  if (value == null || value === "") {
+    managerForm.value.roleId = null;
+  } else {
+    const n = Number(value);
+    managerForm.value.roleId = Number.isFinite(n) ? n : null;
+  }
+  onRoleChange();
+}
 
 function eachRegion(fn: (region: Region) => void) {
   for (const country of Object.values(hierarchy.value)) {
@@ -277,7 +290,7 @@ function onDistrictChange() {
 }
 
 function onRoleChange() {
-  if (!isCouncilCoordinator.value) {
+  if (!showCouncilAssignment.value) {
     managerForm.value.assignedRegion = "";
     managerForm.value.assignedDistrict = "";
     managerForm.value.assignedCouncil = "";
@@ -298,9 +311,13 @@ async function loadManagerRoles() {
   rolesError.value = null;
   try {
     const rolesResponse = await apiClient.get<{
-      data: Array<{ id: number; name: string; description?: string }>;
+      status?: string;
+      data?: Array<{ id: number; name: string; description?: string }>;
     }>("/user/roles");
-    managerRoles.value = (rolesResponse.data.data || []).map((r) => ({
+    const roleList =
+      rolesResponse.data?.data ??
+      (Array.isArray(rolesResponse.data) ? rolesResponse.data : []);
+    managerRoles.value = roleList.map((r) => ({
       label: r.description ? `${r.name} — ${r.description}` : r.name,
       value: r.id,
       roleName: r.name,
@@ -333,7 +350,11 @@ const submitManagerForm = async () => {
     toast.add({ severity: "warn", summary: "Role required", detail: "Select a role.", life: 3000 });
     return;
   }
-  if (isCouncilCoordinator.value) {
+  if (!managerRoles.value.length) {
+    await loadManagerRoles();
+  }
+  const needsCouncil = isCouncilCoordinatorRole(managerForm.value.roleId);
+  if (needsCouncil) {
     if (!managerForm.value.assignedRegion || !managerForm.value.assignedDistrict || !managerForm.value.assignedCouncil) {
       toast.add({
         severity: "warn",
@@ -375,9 +396,9 @@ const submitManagerForm = async () => {
       email: managerForm.value.email,
       phoneNumber: managerForm.value.phoneNumber || undefined,
       password: managerForm.value.password,
-      roleId: managerForm.value.roleId,
+      roleId: Number(managerForm.value.roleId),
     };
-    if (isCouncilCoordinator.value) {
+    if (needsCouncil || managerForm.value.assignedCouncil) {
       payload.assignedRegion = managerForm.value.assignedRegion;
       payload.assignedDistrict = managerForm.value.assignedDistrict;
       payload.assignedCouncil = managerForm.value.assignedCouncil;
