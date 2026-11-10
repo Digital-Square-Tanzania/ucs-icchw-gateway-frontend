@@ -38,6 +38,12 @@
     <TransparentCover v-if="auth.loading" />
     <Toast />
     <RouterView :key="route.fullPath" />
+    <p
+      v-if="route.path !== '/login'"
+      class="mt-2 text-center text-[0.65rem] text-gray-400 dark:text-gray-500"
+      title="Frontend build id — confirms the deployed bundle">
+      UI build {{ appBuildId }}
+    </p>
   </main>
 </template>
 
@@ -76,6 +82,7 @@ watch(
 const router = useRouter()
 const toast = useToast()
 const route = useRoute()
+const appBuildId = __APP_BUILD_ID__
 
 const logout = () => {
   auth.logout(router, toast);

@@ -24,8 +24,16 @@ export default defineConfig(async ({ command }) => {
     }
   }
 
+  const buildId =
+    process.env.VITE_BUILD_ID ||
+    process.env.GITHUB_SHA?.slice(0, 7) ||
+    new Date().toISOString().slice(0, 10)
+
   return {
     plugins,
+    define: {
+      __APP_BUILD_ID__: JSON.stringify(buildId),
+    },
     server: {
       port: parseInt(process.env.VITE_PORT || '3015'),
     },
