@@ -99,6 +99,10 @@ const props = defineProps<{
   councilLocked?: boolean
 }>()
 
+const emit = defineEmits<{
+  activationChanged: []
+}>()
+
 const auth = useAuthStore()
 const confirm = useConfirm()
 const toast = useToast()
@@ -210,6 +214,7 @@ function resendRow(row: ActivationRow) {
       await auth.apiClient.post(`/user/admin/activation-resend/${row.id}`, { confirmOpen })
       toast.add({ severity: 'success', summary: 'Activation resent', life: 2500 })
       await fetchPage(false)
+      emit('activationChanged')
     } catch (error) {
       toast.add({
         severity: 'error',

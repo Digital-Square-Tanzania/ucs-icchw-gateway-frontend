@@ -483,4 +483,6 @@ onMounted(() => {
   void loadHierarchy()
   applyFixedCouncil()
 })
+
+defineExpose({ loadStats })
 </script>

@@ -5,20 +5,29 @@
       <span class="text-gray-500 text-xs ml-2">{{ councilScope.region }} · {{ councilScope.district }}</span>
     </div>
     <ActivationEmailPanel
+      ref="activationPanelRef"
       :council-locked="!!councilScope"
       :fixed-council="councilScope"
       :show-scheduler="auth.hasPermission('activations:schedule')" />
-    <ActivationCategoryExplorer :query-suffix="councilQuery" :council-locked="!!councilScope" />
+    <ActivationCategoryExplorer
+      :query-suffix="councilQuery"
+      :council-locked="!!councilScope"
+      @activation-changed="onActivationChanged" />
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import ActivationEmailPanel from '@/components/settings/ActivationEmailPanel.vue'
 import ActivationCategoryExplorer from '@/components/settings/ActivationCategoryExplorer.vue'
 import { useAuthStore } from '@/stores/auth'
 
 const auth = useAuthStore()
+const activationPanelRef = ref<InstanceType<typeof ActivationEmailPanel> | null>(null)
+
+function onActivationChanged() {
+  void activationPanelRef.value?.loadStats()
+}
 const councilScope = computed(() => auth.councilScope)
 
 const councilQuery = computed(() => {
