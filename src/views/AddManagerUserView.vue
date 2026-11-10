@@ -201,12 +201,16 @@ function roleForId(roleId: number | string | null | undefined) {
 }
 
 function isCouncilCoordinatorRole(roleId: number | string | null | undefined) {
+  const id = Number(roleId);
   const role = roleForId(roleId);
-  if (!role) return false;
-  return (
-    role.roleName === "COUNCIL_COORDINATOR" ||
-    role.label.startsWith("COUNCIL_COORDINATOR")
-  );
+  if (role) {
+    return (
+      role.roleName === "COUNCIL_COORDINATOR" ||
+      role.label.startsWith("COUNCIL_COORDINATOR")
+    );
+  }
+  // Seed default: COUNCIL_COORDINATOR is role id 3 when roles API is unavailable
+  return Number.isFinite(id) && id === 3;
 }
 
 const showCouncilAssignment = computed(() => isCouncilCoordinatorRole(managerForm.value.roleId));
