@@ -59,12 +59,13 @@
         <label class="block text-xs text-gray-600 dark:text-gray-300 mb-1">Lookback</label>
         <select
           v-model.number="days"
-          class="rounded-lg border border-gray-300 dark:border-ucs-700 bg-white dark:bg-ucs-900 px-2 py-1.5 text-sm">
+          class="rounded-lg border border-gray-300 dark:border-ucs-700 bg-white dark:bg-ucs-900 px-2 py-1.5 text-sm"
+          @change="onLookbackChange">
           <option :value="30">Last 30 days</option>
           <option :value="90">Last 90 days</option>
           <option :value="180">Last 180 days</option>
           <option :value="365">Last 365 days</option>
-          <option :value="0">More than 365 days</option>
+          <option :value="0">Over 365 days</option>
         </select>
       </div>
       <button
@@ -92,7 +93,8 @@
     class="mt-6"
     :region="selectedRegion"
     :district="selectedDistrict"
-    :council="selectedCouncil" />
+    :council="selectedCouncil"
+    :days="days" />
 
   <p v-if="error" class="mt-4 text-sm text-red-600 dark:text-red-400">{{ error }}</p>
 
@@ -419,7 +421,7 @@ const councils = ref<string[]>([])
 const selectedRegion = ref('')
 const selectedDistrict = ref('')
 const selectedCouncil = ref('')
-const days = ref(90)
+const days = ref(0)
 const loading = ref(false)
 const hierarchyLoading = ref(false)
 const hierarchyError = ref('')
@@ -474,7 +476,7 @@ function eachRegion(fn: (region: Region) => void) {
 }
 
 function lookbackLabel(days: number) {
-  return days === 0 ? 'More than 365 days' : `${days} days`
+  return days === 0 ? 'Over 365 days' : `Last ${days} days`
 }
 
 function formatDate(value?: string | null) {
@@ -559,6 +561,11 @@ async function loadHierarchy() {
   } finally {
     hierarchyLoading.value = false
   }
+}
+
+function onLookbackChange() {
+  if (!selectedCouncil.value) return
+  void runAnalytics()
 }
 
 async function runAnalytics(preserveTab = false) {

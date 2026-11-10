@@ -1,21 +1,11 @@
 <template>
   <section>
-    <div class="flex flex-wrap items-start justify-between gap-3 mb-3">
-      <div>
-        <h2 class="text-lg font-semibold text-ucs-700 dark:text-ucs-200">HRHIS registrations</h2>
-        <p class="text-sm text-gray-600 dark:text-gray-300">
-          Daily incoming register traffic, successes, open failures, and recovery retries for the selected council.
-        </p>
-      </div>
-      <select
-        v-model.number="hrhisDays"
-        class="rounded-lg border border-gray-300 dark:border-ucs-700 bg-white dark:bg-ucs-900 px-3 py-1.5 text-sm"
-        @change="loadHrhisTimeseries">
-        <option :value="7">Last 7 days</option>
-        <option :value="30">Last 30 days</option>
-        <option :value="60">Last 60 days</option>
-        <option :value="90">Last 90 days</option>
-      </select>
+    <div class="mb-3">
+      <h2 class="text-lg font-semibold text-ucs-700 dark:text-ucs-200">HRHIS registrations</h2>
+      <p class="text-sm text-gray-600 dark:text-gray-300">
+        Daily incoming register traffic, successes, open failures, and recovery retries for the selected council
+        (same lookback as Summary).
+      </p>
     </div>
     <article class="rounded-xl border border-gray-200 dark:border-ucs-800 bg-white dark:bg-ucs-900/40 p-5 shadow-sm">
       <div class="mb-4 flex flex-wrap gap-3 text-xs text-gray-700 dark:text-gray-300">
@@ -48,11 +38,11 @@ const props = defineProps<{
   region: string
   district: string
   council: string
+  days: number
 }>()
 
 const auth = useAuthStore()
 
-const hrhisDays = ref(30)
 const hrhisBuckets = ref<HrhisBucket[]>([])
 const hrhisTotals = reactive({ incoming: 0, succeeded: 0, failed: 0, recovered: 0 })
 const hrhisLoading = ref(false)
@@ -71,7 +61,7 @@ async function loadHrhisTimeseries() {
   hrhisError.value = ''
   try {
     const params = new URLSearchParams({
-      days: String(hrhisDays.value),
+      days: String(props.days),
       region: props.region,
       district: props.district,
       council: props.council,
@@ -98,7 +88,7 @@ async function loadHrhisTimeseries() {
 }
 
 watch(
-  () => [props.region, props.district, props.council] as const,
+  () => [props.region, props.district, props.council, props.days] as const,
   () => void loadHrhisTimeseries(),
   { immediate: true },
 )

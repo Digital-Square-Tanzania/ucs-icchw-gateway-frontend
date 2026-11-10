@@ -42,6 +42,6 @@ export function visibleSettingsTabs(
   const fromPerms = order.filter((tab) => hasSettingsTabAccess(permissions, tab))
   if (fromPerms.length) return fromPerms
   if (role === 'UCS_DEVELOPER' || role === 'MOH_ADMIN') return order
-  if (role === 'COUNCIL_COORDINATOR') return ['activations']
+  if (role === 'COUNCIL_COORDINATOR') return ['activations', 'location-recovery']
   return []
 }
