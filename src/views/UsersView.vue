@@ -284,12 +284,16 @@ function mapUsers(raw: unknown[], activeSystem: SystemCode) {
       };
     }
     if (activeSystem === "manager") {
+      const roleLabel =
+        row.roleName != null && row.roleName !== ""
+          ? String(row.roleName)
+          : managerRoleName(row.role);
       return {
         email: row.email,
         firstName: row.firstName,
         middleName: row.middleName || "—",
         lastName: row.lastName,
-        role: managerRoleName(row.role),
+        role: roleLabel,
         phoneNumber: row.phoneNumber,
       };
     }
@@ -301,6 +305,9 @@ function mapUsers(raw: unknown[], activeSystem: SystemCode) {
 }
 
 function displayRole(row: Record<string, unknown>, field: string): string {
+  if (field === "role" && row.roleName != null && row.roleName !== "") {
+    return String(row.roleName);
+  }
   const value = row[field];
   if (field === "role") return managerRoleName(value);
   return value != null ? String(value) : "";

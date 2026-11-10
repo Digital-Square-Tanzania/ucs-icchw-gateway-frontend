@@ -204,7 +204,7 @@ import AutoComplete from "primevue/autocomplete";
 import ApiClient from "@/utilities/ApiClient";
 import { useAuthStore } from "@/stores/auth";
 import { useToast } from "primevue/usetoast";
-import { useRouter } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 
 interface Facility {
   name: string;
@@ -215,11 +215,16 @@ interface Facility {
 const props = defineProps({
   system: {
     type: String,
-    required: true,
+    default: "openmrs",
   },
 });
 
-const normalizedSystem = computed(() => props.system?.toLowerCase() || "openmrs");
+const route = useRoute();
+const normalizedSystem = computed(() => {
+  const fromRoute = route.params.system;
+  const raw = typeof fromRoute === "string" ? fromRoute : Array.isArray(fromRoute) ? fromRoute[0] : "";
+  return (raw || props.system || "openmrs").toLowerCase();
+});
 const isManager = computed(() => normalizedSystem.value === "manager");
 const isDhis2 = computed(() => normalizedSystem.value === "dhis2");
 const isOpenMrs = computed(() => !isManager.value && !isDhis2.value);
@@ -258,31 +263,38 @@ const managerForm = ref({
   roleId: null as number | null,
 });
 
+async function loadOpenMrsTeamRoles() {
+  const teamRolesResponse = await apiClient.get("/openmrs/teamrole");
+  const typedData = teamRolesResponse.data as { data: Array<{ uuid: string; name: string }> };
+  teamRoles.value = typedData.data || [];
+  if (teamRoles.value.length && !form.value.selectedRole) {
+    const defaultRole = teamRoles.value.find((r) => r.uuid === icchwRoleUuid) || teamRoles.value[0];
+    form.value.selectedRole = defaultRole?.uuid || "";
+  }
+}
+
+async function loadManagerRoles() {
+  rolesLoading.value = true;
+  try {
+    const rolesResponse = await apiClient.get<{
+      data: Array<{ id: number; name: string; description?: string }>;
+    }>("/user/roles");
+    managerRoles.value = (rolesResponse.data.data || []).map((r) => ({
+      label: r.description ? `${r.name} — ${r.description}` : r.name,
+      value: r.id,
+    }));
+  } finally {
+    rolesLoading.value = false;
+  }
+}
+
 onMounted(async () => {
   try {
     await apiClient.get("/auth/me");
-
-    if (isOpenMrs.value) {
-      const teamRolesResponse = await apiClient.get("/openmrs/teamrole");
-      const typedData = teamRolesResponse.data as { data: Array<{ uuid: string; name: string }> };
-      teamRoles.value = typedData.data || [];
-      if (teamRoles.value.length && !form.value.selectedRole) {
-        const defaultRole =
-          teamRoles.value.find((r) => r.uuid === icchwRoleUuid) || teamRoles.value[0];
-        form.value.selectedRole = defaultRole?.uuid || "";
-      }
-    }
-
     if (isManager.value) {
-      rolesLoading.value = true;
-      const rolesResponse = await apiClient.get<{
-        data: Array<{ id: number; name: string; description?: string }>;
-      }>("/user/roles");
-      managerRoles.value = (rolesResponse.data.data || []).map((r) => ({
-        label: r.description ? `${r.name} — ${r.description}` : r.name,
-        value: r.id,
-      }));
-      rolesLoading.value = false;
+      await loadManagerRoles();
+    } else if (isOpenMrs.value) {
+      await loadOpenMrsTeamRoles();
     }
   } catch (error) {
     rolesLoading.value = false;
@@ -292,6 +304,16 @@ onMounted(async () => {
     } else {
       console.error("Error loading add-user form:", error);
     }
+  }
+});
+
+watch(normalizedSystem, async (system) => {
+  if (system === "manager") {
+    teamRoles.value = [];
+    await loadManagerRoles();
+  } else if (system === "openmrs") {
+    managerRoles.value = [];
+    await loadOpenMrsTeamRoles();
   }
 });
 

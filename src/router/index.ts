@@ -1,4 +1,4 @@
-import { createRouter, createWebHistory } from 'vue-router'
+import { createRouter, createWebHistory, type RouteLocationNormalizedLoaded } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import Dashboard from '@/views/DashboardView.vue'
 import Users from '@/views/UsersView.vue'
@@ -32,11 +32,13 @@ const routes = [
     meta: { requiresAuth: true },
   },
   {
-    path: '/adduser/:system',
+    path: '/adduser/:system(openmrs|manager|dhis2)',
     name: 'AddUser',
     component: AddUserView,
     meta: { requiresAuth: true },
-    props: true, // Pass route params as props to the component
+    props: (route: RouteLocationNormalizedLoaded) => ({
+      system: String(route.params.system || 'openmrs').toLowerCase(),
+    }),
   },
   {
     path: '/settings',
