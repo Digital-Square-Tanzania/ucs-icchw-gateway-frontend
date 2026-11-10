@@ -5,7 +5,7 @@
         <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Activations by category</h3>
         <p class="text-xs text-gray-500 dark:text-gray-400">
           One row per CHW (not per old slug). Resends column is total resends across all slugs for that account.
-          Placeholder emails (e.g. unknown@example.com) are hidden from actionable tabs.
+          Rows with placeholder email (unknown@example.com) are listed but cannot be resent until HRHIS has a real email.
         </p>
       </div>
       <button
@@ -137,8 +137,15 @@ function formatDate(value: string) {
   return Number.isNaN(d.getTime()) ? value : d.toLocaleString()
 }
 
+const PLACEHOLDER_EMAILS = new Set(['unknown@example.com'])
+
+function isPlaceholderEmail(email: string | null | undefined) {
+  return PLACEHOLDER_EMAILS.has(String(email || '').trim().toLowerCase())
+}
+
 function canResendRow(row: ActivationRow) {
   if (row.isUsed) return false
+  if (isPlaceholderEmail(row.email)) return false
   const open = new Date(row.expiryDate) >= new Date()
   if (open) return auth.hasPermission('activations:resend')
   return !row.isResent && auth.hasPermission('activations:resend')
