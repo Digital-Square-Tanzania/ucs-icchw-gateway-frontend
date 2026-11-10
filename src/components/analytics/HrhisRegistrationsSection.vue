@@ -4,10 +4,7 @@
       <div>
         <h2 class="text-lg font-semibold text-ucs-700 dark:text-ucs-200">HRHIS registrations</h2>
         <p class="text-sm text-gray-600 dark:text-gray-300">
-          Incoming register requests with succeeded, open failed, and recovery retries.
-        </p>
-        <p v-if="councilLabel" class="mt-1 text-xs text-ucs-600 dark:text-ucs-300">
-          Scoped to council: <strong>{{ councilLabel }}</strong>
+          Daily incoming register traffic, successes, open failures, and recovery retries for the selected council.
         </p>
       </div>
       <select
@@ -36,20 +33,24 @@
         </span>
       </div>
       <p v-if="hrhisLoading" class="text-sm text-gray-500">Loading chart…</p>
-      <p v-else-if="hrhisError" class="text-sm text-red-600">{{ hrhisError }}</p>
+      <p v-else-if="hrhisError" class="text-sm text-red-600 dark:text-red-400">{{ hrhisError }}</p>
       <HrhisRegisterChart v-else :buckets="hrhisBuckets" />
     </article>
   </section>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue'
+import { reactive, ref, watch } from 'vue'
 import HrhisRegisterChart, { type HrhisBucket } from '@/components/settings/HrhisRegisterChart.vue'
 import { useAuthStore } from '@/stores/auth'
 
-const auth = useAuthStore()
+const props = defineProps<{
+  region: string
+  district: string
+  council: string
+}>()
 
-const councilLabel = computed(() => auth.councilScope?.council ?? '')
+const auth = useAuthStore()
 
 const hrhisDays = ref(30)
 const hrhisBuckets = ref<HrhisBucket[]>([])
@@ -58,16 +59,23 @@ const hrhisLoading = ref(false)
 const hrhisError = ref('')
 
 async function loadHrhisTimeseries() {
+  if (!props.council?.trim()) {
+    hrhisBuckets.value = []
+    hrhisTotals.incoming = 0
+    hrhisTotals.succeeded = 0
+    hrhisTotals.failed = 0
+    hrhisTotals.recovered = 0
+    return
+  }
   hrhisLoading.value = true
   hrhisError.value = ''
   try {
-    const params = new URLSearchParams({ days: String(hrhisDays.value) })
-    const scope = auth.councilScope
-    if (scope?.council) {
-      params.set('region', scope.region)
-      params.set('district', scope.district)
-      params.set('council', scope.council)
-    }
+    const params = new URLSearchParams({
+      days: String(hrhisDays.value),
+      region: props.region,
+      district: props.district,
+      council: props.council,
+    })
     const response = await auth.apiClient.get<{
       data?: {
         buckets?: HrhisBucket[]
@@ -81,11 +89,19 @@ async function loadHrhisTimeseries() {
     hrhisTotals.failed = data?.totals?.failed ?? 0
     hrhisTotals.recovered = data?.totals?.recovered ?? 0
   } catch (error) {
-    hrhisError.value = error instanceof Error ? error.message : 'Failed to load HRHIS chart.'
+    hrhisError.value =
+      (error as { response?: { data?: { message?: string } } })?.response?.data?.message ||
+      (error instanceof Error ? error.message : 'Failed to load HRHIS chart.')
   } finally {
     hrhisLoading.value = false
   }
 }
 
-onMounted(() => loadHrhisTimeseries())
+watch(
+  () => [props.region, props.district, props.council] as const,
+  () => void loadHrhisTimeseries(),
+  { immediate: true },
+)
+
+defineExpose({ reload: loadHrhisTimeseries })
 </script>

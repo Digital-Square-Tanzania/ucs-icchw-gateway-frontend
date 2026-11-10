@@ -59,7 +59,7 @@ export const useAuthStore = defineStore('auth', {
       if (hasSettingsTabAccess(state.permissions, tab)) return true
       const role = state.user?.role ?? getRoleFromToken(state.accessToken)
       if (role === Role.UCS_DEVELOPER || role === Role.MOH_ADMIN) return true
-      if (role === Role.COUNCIL_COORDINATOR && (tab === 'hrhis-reg' || tab === 'activations')) return true
+      if (role === Role.COUNCIL_COORDINATOR && tab === 'activations') return true
       return false
     },
     hasAnySettingsAccess: (state) => {

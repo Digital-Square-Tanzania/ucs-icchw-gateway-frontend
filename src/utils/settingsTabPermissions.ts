@@ -1,6 +1,5 @@
 export const SETTINGS_TAB_PERMISSIONS = [
   'settings:manage',
-  'settings:tab:hrhis-reg',
   'settings:tab:activations',
   'settings:tab:location-recovery',
   'settings:tab:maintenance',
@@ -8,7 +7,6 @@ export const SETTINGS_TAB_PERMISSIONS = [
 ] as const
 
 export type SettingsTabId =
-  | 'hrhis-reg'
   | 'activations'
   | 'location-recovery'
   | 'maintenance'
@@ -35,7 +33,6 @@ export function visibleSettingsTabs(
   role?: string | null,
 ): SettingsTabId[] {
   const order: SettingsTabId[] = [
-    'hrhis-reg',
     'activations',
     'location-recovery',
     'maintenance',
@@ -45,6 +42,6 @@ export function visibleSettingsTabs(
   const fromPerms = order.filter((tab) => hasSettingsTabAccess(permissions, tab))
   if (fromPerms.length) return fromPerms
   if (role === 'UCS_DEVELOPER' || role === 'MOH_ADMIN') return order
-  if (role === 'COUNCIL_COORDINATOR') return ['hrhis-reg', 'activations']
+  if (role === 'COUNCIL_COORDINATOR') return ['activations']
   return []
 }

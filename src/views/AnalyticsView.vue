@@ -87,6 +87,13 @@
     </template>
   </article>
 
+  <HrhisRegistrationsSection
+    v-if="selectedCouncil"
+    class="mt-6"
+    :region="selectedRegion"
+    :district="selectedDistrict"
+    :council="selectedCouncil" />
+
   <p v-if="error" class="mt-4 text-sm text-red-600 dark:text-red-400">{{ error }}</p>
 
   <template v-if="data">
@@ -287,6 +294,7 @@
 import { computed, nextTick, onMounted, ref } from 'vue'
 import PageTitle from '@/components/layout/PageTitle.vue'
 import CouncilHierarchyHero from '@/components/layout/CouncilHierarchyHero.vue'
+import HrhisRegistrationsSection from '@/components/analytics/HrhisRegistrationsSection.vue'
 import DuplicateResolutionDialog from '@/components/dialogs/DuplicateResolutionDialog.vue'
 import { useAuthStore } from '@/stores/auth'
 

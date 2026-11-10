@@ -24,8 +24,7 @@
       </button>
     </nav>
 
-    <SettingsHrhisRegTab v-if="activeTab === 'hrhis-reg'" />
-    <SettingsActivationsTab v-else-if="activeTab === 'activations'" />
+    <SettingsActivationsTab v-if="activeTab === 'activations'" />
     <SettingsLocationRecoveryTab v-else-if="activeTab === 'location-recovery'" />
     <SettingsMaintenanceTab v-else-if="activeTab === 'maintenance'" />
     <SettingsRbacTab v-else-if="activeTab === 'rbac'" />
@@ -38,14 +37,12 @@ import { useRoute, useRouter } from 'vue-router'
 import PageTitle from '@/components/layout/PageTitle.vue'
 import { useAuthStore } from '@/stores/auth'
 import { visibleSettingsTabs, type SettingsTabId } from '@/utils/settingsTabPermissions'
-import SettingsHrhisRegTab from '@/views/settings/SettingsHrhisRegTab.vue'
 import SettingsActivationsTab from '@/views/settings/SettingsActivationsTab.vue'
 import SettingsLocationRecoveryTab from '@/views/settings/SettingsLocationRecoveryTab.vue'
 import SettingsMaintenanceTab from '@/views/settings/SettingsMaintenanceTab.vue'
 import SettingsRbacTab from '@/views/settings/SettingsRbacTab.vue'
 
 const TAB_LABELS: Record<SettingsTabId, string> = {
-  'hrhis-reg': 'HRHIS Reg',
   activations: 'Activations',
   'location-recovery': 'HRHIS Location Recovery',
   maintenance: 'Maintenance',
@@ -60,7 +57,7 @@ const tabs = computed(() =>
   visibleSettingsTabs(auth.permissions, auth.userRole).map((id) => ({ id, label: TAB_LABELS[id] })),
 )
 
-const activeTab = ref<SettingsTabId>('hrhis-reg')
+const activeTab = ref<SettingsTabId>('activations')
 
 watch(
   tabs,
