@@ -1,10 +1,16 @@
-import { createRouter, createWebHistory, type RouteLocationNormalizedLoaded } from 'vue-router'
+import {
+  createRouter,
+  createWebHistory,
+  type RouteLocationGeneric,
+} from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import Dashboard from '@/views/DashboardView.vue'
 import Users from '@/views/UsersView.vue'
 import LoginView from '@/views/LoginView.vue'
 import NotFoundView from '@/views/NotFoundView.vue'
 import AddUserView from '@/views/AddUserView.vue'
+import AddManagerUserView from '@/views/AddManagerUserView.vue'
+import AddDhis2UserView from '@/views/AddDhis2UserView.vue'
 import SettingsView from '@/views/SettingsView.vue'
 import AnalyticsView from '@/views/AnalyticsView.vue'
 import { ANALYTICS_ROLES, SETTINGS_ROLES, type RoleName } from '@/constants/roles'
@@ -32,13 +38,27 @@ const routes = [
     meta: { requiresAuth: true },
   },
   {
-    path: '/adduser/:system(openmrs|manager|dhis2)',
-    name: 'AddUser',
+    path: '/adduser/openmrs',
+    name: 'AddOpenMrsUser',
     component: AddUserView,
     meta: { requiresAuth: true },
-    props: (route: RouteLocationNormalizedLoaded) => ({
-      system: String(route.params.system || 'openmrs').toLowerCase(),
-    }),
+  },
+  {
+    path: '/adduser/manager',
+    name: 'AddManagerUser',
+    component: AddManagerUserView,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/adduser/dhis2',
+    name: 'AddDhis2User',
+    component: AddDhis2UserView,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/adduser/:system(openmrs|manager|dhis2)',
+    redirect: (to: RouteLocationGeneric) =>
+      `/adduser/${String(to.params.system || 'openmrs').toLowerCase()}`,
   },
   {
     path: '/settings',

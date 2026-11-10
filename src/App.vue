@@ -37,7 +37,7 @@
   }">
     <TransparentCover v-if="auth.loading" />
     <Toast />
-    <RouterView />
+    <RouterView :key="route.fullPath" />
   </main>
 </template>
 

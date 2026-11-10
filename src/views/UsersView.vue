@@ -404,7 +404,14 @@ function setRoleFilter(roleName: string | null) {
 }
 
 function goToAddUser() {
-  router.push({ name: "AddUser", params: { system: currentSystem.value } });
+  const system = currentSystem.value;
+  if (system === "manager") {
+    router.push({ name: "AddManagerUser" });
+  } else if (system === "dhis2") {
+    router.push({ name: "AddDhis2User" });
+  } else {
+    router.push({ name: "AddOpenMrsUser" });
+  }
 }
 
 function onSearchInput() {
