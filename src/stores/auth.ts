@@ -9,6 +9,7 @@ import {
   hasSettingsTabAccess,
   type SettingsTabId,
 } from '@/utils/settingsTabPermissions'
+import { canAccessNavPath } from '@/utils/navPermissions'
 import { getRoleFromToken } from '@/utilities/jwt'
 
 const API_URL = import.meta.env.VITE_API_URL
@@ -68,16 +69,24 @@ export const useAuthStore = defineStore('auth', {
       return role === Role.UCS_DEVELOPER || role === Role.MOH_ADMIN || role === Role.COUNCIL_COORDINATOR
     },
     canAccessSettings: (state) => {
+      if (state.permissions.includes('settings:manage')) return true
+      if (state.permissions.includes('menu:settings')) return true
       if (hasAnySettingsTabAccess(state.permissions)) return true
-      const role = state.user?.role ?? getRoleFromToken(state.accessToken)
-      return role === Role.UCS_DEVELOPER || role === Role.MOH_ADMIN || role === Role.COUNCIL_COORDINATOR
+      if (!state.permissions.length) {
+        const role = state.user?.role ?? getRoleFromToken(state.accessToken)
+        return role === Role.UCS_DEVELOPER || role === Role.MOH_ADMIN || role === Role.COUNCIL_COORDINATOR
+      }
+      return false
     },
     canAccessAnalytics: (state) => {
-      if (state.permissions.includes('menu:analytics') || state.permissions.includes('settings:manage')) {
+      if (state.permissions.includes('settings:manage') || state.permissions.includes('menu:analytics')) {
         return true
       }
-      const role = state.user?.role ?? getRoleFromToken(state.accessToken)
-      return canAccessAnalytics(role) || role === Role.COUNCIL_COORDINATOR
+      if (!state.permissions.length) {
+        const role = state.user?.role ?? getRoleFromToken(state.accessToken)
+        return canAccessAnalytics(role) || role === Role.COUNCIL_COORDINATOR
+      }
+      return false
     },
     /** Default route after login or visiting `/`. */
     homePath: (state) => {
@@ -92,11 +101,7 @@ export const useAuthStore = defineStore('auth', {
       }
       return '/dashboard'
     },
-    canAccessNav: (state) => (path: string) => {
-      if (state.permissions.includes('settings:manage')) return true
-      if (!state.menus?.length) return true
-      return state.menus.some((m) => m.path === path)
-    },
+    canAccessNav: (state) => (path: string) => canAccessNavPath(state.permissions, path),
     isUcsDeveloper: (state) =>
       isUcsDeveloper(state.user?.role ?? getRoleFromToken(state.accessToken)),
     apiClient: (state) => new ApiClient(state.accessToken),

@@ -101,7 +101,15 @@ router.beforeEach(async (to, from, next) => {
   if (to.meta.requiresSettingsAccess) {
     if (!auth.permissions.length) await auth.fetchProfile()
     if (!auth.hasAnySettingsAccess) {
-      next('/dashboard')
+      next(auth.homePath)
+      return
+    }
+  }
+
+  if (to.path === '/users' || to.path.startsWith('/adduser')) {
+    if (!auth.permissions.length) await auth.fetchProfile()
+    if (!auth.canAccessNav('/users')) {
+      next(auth.homePath)
       return
     }
   }
