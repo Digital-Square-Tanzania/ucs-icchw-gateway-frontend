@@ -2,8 +2,8 @@
 export const NAV_PATH_PERMISSION: Record<string, string> = {
   '/dashboard': 'menu:dashboard',
   '/users': 'menu:users',
-  '/settings': 'menu:settings',
   '/analytics': 'menu:analytics',
+  '/settings': 'menu:settings',
 }
 
 export function canAccessNavPath(permissions: string[], path: string): boolean {

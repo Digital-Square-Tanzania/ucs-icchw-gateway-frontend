@@ -17,8 +17,8 @@
       <div id="links-area" class="p-5">
         <MainLink v-if="auth.canAccessNav('/dashboard')" route="/dashboard" title="Dashboard" />
         <MainLink v-if="auth.canAccessNav('/users')" route="/users" title="Users" />
-        <MainLink v-if="auth.canAccessSettings" route="/settings" title="Settings" />
         <MainLink v-if="auth.canAccessAnalytics" route="/analytics" title="Analytics" />
+        <MainLink v-if="auth.canAccessSettings" route="/settings" title="Settings" />
       </div>
       <div id="user-area" class="p-4 tracking-wider w-1/4">
         <span
