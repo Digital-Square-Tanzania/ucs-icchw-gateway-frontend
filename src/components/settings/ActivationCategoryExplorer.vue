@@ -176,6 +176,7 @@ const columnsByCategory: Record<ActivationCategory, { key: ColumnKey; label: str
     { key: 'firstSentOn', label: 'First sent on' },
     { key: 'expiredOn', label: 'Expired on' },
     { key: 'lastSentOn', label: 'Last sent on' },
+    { key: 'resends', label: 'Resends', align: 'right' },
   ],
   activated: [
     { key: 'name', label: 'Name' },
