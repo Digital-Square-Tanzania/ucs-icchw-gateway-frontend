@@ -7,6 +7,12 @@
           One row per CHW (not per old slug). Resends column is total resends across all slugs for that account.
           Rows with placeholder email (unknown@example.com) are listed but cannot be resent until HRHIS has a real email.
         </p>
+        <p v-if="scopeLabel" class="mt-1 text-xs text-ucs-700 dark:text-ucs-300">
+          Filtered to {{ scopeLabel }}.
+        </p>
+        <p v-else-if="!councilLocked" class="mt-1 text-xs text-gray-400">
+          All councils. Choose a council under Resend location to narrow this list.
+        </p>
       </div>
       <button
         type="button"
@@ -44,6 +50,7 @@
             <tr>
               <th class="px-3 py-2 text-left">Name</th>
               <th class="px-3 py-2 text-left">Email</th>
+              <th class="px-3 py-2 text-left">Sent on</th>
               <th class="px-3 py-2 text-left">Expires</th>
               <th class="px-3 py-2 text-right">Resends</th>
               <th class="px-3 py-2 text-right">Action</th>
@@ -53,6 +60,7 @@
             <tr v-for="row in rows" :key="row.id" class="border-t border-gray-100 dark:border-ucs-800">
               <td class="px-3 py-2">{{ row.fullName || '—' }}</td>
               <td class="px-3 py-2 font-mono text-xs">{{ row.email }}</td>
+              <td class="px-3 py-2 text-xs">{{ formatDate(row.createdAt) }}</td>
               <td class="px-3 py-2 text-xs">{{ formatDate(row.expiryDate) }}</td>
               <td class="px-3 py-2 text-right tabular-nums">{{ row.resendCount ?? 0 }}</td>
               <td class="px-3 py-2 text-right">
@@ -87,7 +95,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useConfirm } from 'primevue/useconfirm'
 import { useToast } from 'primevue/usetoast'
 import { useAuthStore } from '@/stores/auth'
@@ -96,6 +104,7 @@ export type ActivationCategory = 'open' | 'expired' | 'expired_resent' | 'activa
 
 const props = defineProps<{
   querySuffix?: string
+  scopeLabel?: string
   councilLocked?: boolean
 }>()
 
@@ -111,6 +120,7 @@ interface ActivationRow {
   id: number
   email: string | null
   fullName: string | null
+  createdAt: string
   expiryDate: string
   isUsed: boolean
   isResent: boolean
@@ -205,6 +215,15 @@ function loadMore() {
   page.value += 1
   void fetchPage(true)
 }
+
+watch(
+  () => props.querySuffix,
+  () => {
+    if (!panelOpen.value) return
+    page.value = 1
+    void fetchPage(false)
+  },
+)
 
 function resendRow(row: ActivationRow) {
   const open = new Date(row.expiryDate) >= new Date()

@@ -8,9 +8,11 @@
       ref="activationPanelRef"
       :council-locked="!!councilScope"
       :fixed-council="councilScope"
-      :show-scheduler="auth.hasPermission('activations:schedule')" />
+      :show-scheduler="auth.hasPermission('activations:schedule')"
+      @location-change="onResendLocation" />
     <ActivationCategoryExplorer
-      :query-suffix="councilQuery"
+      :query-suffix="categoryQuery"
+      :scope-label="categoryScopeLabel"
       :council-locked="!!councilScope"
       @activation-changed="onActivationChanged" />
   </div>
@@ -24,15 +26,29 @@ import { useAuthStore } from '@/stores/auth'
 
 const auth = useAuthStore()
 const activationPanelRef = ref<InstanceType<typeof ActivationEmailPanel> | null>(null)
+const resendLocation = ref<{ region: string; district: string; council: string } | null>(null)
 
 function onActivationChanged() {
   void activationPanelRef.value?.loadStats()
 }
+
+function onResendLocation(filter: { region: string; district: string; council: string } | null) {
+  resendLocation.value = filter
+}
+
 const councilScope = computed(() => auth.councilScope)
 
-const councilQuery = computed(() => {
-  const s = councilScope.value
-  if (!s) return ''
+const activeLocation = computed(() => {
+  const locked = councilScope.value
+  if (locked?.council) return locked
+  return resendLocation.value
+})
+
+const categoryQuery = computed(() => {
+  const s = activeLocation.value
+  if (!s?.council) return ''
   return `region=${encodeURIComponent(s.region)}&district=${encodeURIComponent(s.district)}&council=${encodeURIComponent(s.council)}`
 })
+
+const categoryScopeLabel = computed(() => activeLocation.value?.council ?? '')
 </script>

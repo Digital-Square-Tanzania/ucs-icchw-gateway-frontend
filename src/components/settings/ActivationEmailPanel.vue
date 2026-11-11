@@ -29,7 +29,7 @@
       class="rounded-xl border border-gray-200 dark:border-ucs-800 bg-gray-50 dark:bg-ucs-900/30 p-4">
       <h3 class="text-sm font-semibold text-gray-700 dark:text-ucs-200 mb-1">Resend location</h3>
       <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">
-        Pick Region → District → Council to scope metrics and enable resends. Batches target that council only.
+        Pick Region → District → Council to scope metrics, the category list, and enable resends. Batches target that council only.
       </p>
       <div class="grid gap-3 sm:grid-cols-3">
         <div>
@@ -210,6 +210,10 @@ const props = withDefaults(
 const auth = useAuthStore()
 const toast = useToast()
 
+const emit = defineEmits<{
+  locationChange: [filter: { region: string; district: string; council: string } | null]
+}>()
+
 interface Stats {
   unsentExpired: number
   activated: number
@@ -310,6 +314,10 @@ function locationFilter() {
   }
 }
 
+function emitLocation() {
+  emit('locationChange', locationFilter())
+}
+
 async function loadStats() {
   loadingStats.value = true
   try {
@@ -366,6 +374,7 @@ function onRegionChange() {
     }
   })
   districts.value = [...set].sort()
+  emitLocation()
   loadStats()
 }
 
@@ -383,10 +392,12 @@ function onDistrictChange() {
     }
   })
   councils.value = [...set].sort()
+  emitLocation()
   loadStats()
 }
 
 function onCouncilChange() {
+  emitLocation()
   loadStats()
 }
 
@@ -463,6 +474,7 @@ function applyFixedCouncil() {
   selectedRegion.value = props.fixedCouncil.region
   selectedDistrict.value = props.fixedCouncil.district
   selectedCouncil.value = props.fixedCouncil.council
+  emitLocation()
   void loadStats()
 }
 
