@@ -98,7 +98,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useConfirm } from 'primevue/useconfirm'
 import { useToast } from 'primevue/usetoast'
 import { useAuthStore } from '@/stores/auth'
@@ -193,6 +193,7 @@ const total = ref(0)
 const page = ref(1)
 const loading = ref(false)
 const resendingId = ref<number | null>(null)
+let fetchSerial = 0
 
 const activeLabel = computed(
   () => categories.find((c) => c.id === activeCategory.value)?.label ?? 'Activations',
@@ -255,6 +256,7 @@ function canResendRow(row: ActivationRow) {
 }
 
 async function fetchPage(append = false) {
+  const serial = ++fetchSerial
   loading.value = true
   try {
     const qs = new URLSearchParams({
@@ -272,11 +274,13 @@ async function fetchPage(append = false) {
     const res = await auth.apiClient.get<{
       data?: { rows?: ActivationRow[]; total?: number }
     }>(`/user/admin/activation-list?${qs}`)
+    if (serial !== fetchSerial) return
     const data = res.data?.data
     const newRows = data?.rows ?? []
     rows.value = append ? [...rows.value, ...newRows] : newRows
     total.value = data?.total ?? newRows.length
   } catch (error) {
+    if (serial !== fetchSerial) return
     toast.add({
       severity: 'error',
       summary: 'Could not load activations',
@@ -284,8 +288,15 @@ async function fetchPage(append = false) {
       life: 4000,
     })
   } finally {
-    loading.value = false
+    if (serial === fetchSerial) loading.value = false
   }
+}
+
+function loadOpenCategory() {
+  activeCategory.value = 'open'
+  panelOpen.value = true
+  page.value = 1
+  void fetchPage(false)
 }
 
 function openCategory(id: ActivationCategory) {
@@ -307,12 +318,25 @@ function loadMore() {
 
 watch(
   () => props.querySuffix,
-  () => {
-    if (!panelOpen.value) return
+  (suffix) => {
+    if (!suffix) {
+      if (!panelOpen.value) return
+      page.value = 1
+      void fetchPage(false)
+      return
+    }
+    if (!panelOpen.value) {
+      loadOpenCategory()
+      return
+    }
     page.value = 1
     void fetchPage(false)
   },
 )
+
+onMounted(() => {
+  if (props.querySuffix || props.councilLocked) loadOpenCategory()
+})
 
 function resendRow(row: ActivationRow) {
   const open = new Date(row.expiryDate) >= new Date()
