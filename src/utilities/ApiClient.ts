@@ -1,9 +1,15 @@
-import type { AxiosRequestConfig } from 'axios'
+import type { AxiosRequestConfig, AxiosResponse, InternalAxiosRequestConfig } from 'axios'
 import axios, { type AxiosInstance } from 'axios'
-import type { AxiosResponse } from 'axios'
-// import { config } from 'dotenv'
+import { accessTokenExpiresSoon, refreshAccessToken } from '@/utilities/sessionTokens'
 
-// config()
+function isAuthExempt(url?: string) {
+  return !!url && (url.includes('/auth/login') || url.includes('/auth/refresh-token'))
+}
+
+function redirectToLogin() {
+  if (window.location.pathname.startsWith('/login')) return
+  window.location.assign('/login')
+}
 
 class ApiClient {
   private client: AxiosInstance
@@ -17,6 +23,36 @@ class ApiClient {
         'Content-Type': 'application/json',
       },
     })
+
+    this.client.interceptors.request.use(async (config) => {
+      if (isAuthExempt(config.url)) return config
+      let token = localStorage.getItem('accessToken') || authToken
+      if (token && accessTokenExpiresSoon(token)) {
+        token = (await refreshAccessToken()) || token
+      }
+      if (token) config.headers.Authorization = `Bearer ${token}`
+      return config
+    })
+
+    this.client.interceptors.response.use(
+      (response) => response,
+      async (error) => {
+        const config = error.config as (InternalAxiosRequestConfig & { _retry?: boolean }) | undefined
+        const message = error.response?.data?.message as string | undefined
+        const expired = error.response?.status === 401 && /access token expired/i.test(message || '')
+        if (!expired || !config || config._retry || isAuthExempt(config.url)) {
+          return Promise.reject(error)
+        }
+        config._retry = true
+        const token = await refreshAccessToken()
+        if (!token) {
+          redirectToLogin()
+          return Promise.reject(error)
+        }
+        config.headers.Authorization = `Bearer ${token}`
+        return this.client.request(config)
+      },
+    )
   }
 
   public async get<T>(url: string, config?: AxiosRequestConfig): Promise<AxiosResponse<T>> {

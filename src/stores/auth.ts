@@ -11,6 +11,7 @@ import {
 } from '@/utils/settingsTabPermissions'
 import { canAccessNavPath } from '@/utils/navPermissions'
 import { getRoleFromToken } from '@/utilities/jwt'
+import { onAccessTokenChange } from '@/utilities/sessionTokens'
 
 const API_URL = import.meta.env.VITE_API_URL
 
@@ -218,8 +219,19 @@ export const useAuthStore = defineStore('auth', {
       this.accessToken = ''
       this.refreshToken = ''
       this.user = null
+      this.permissions = []
+      this.menus = []
       localStorage.removeItem('accessToken')
       localStorage.removeItem('refreshToken')
     },
   },
+})
+
+onAccessTokenChange((token) => {
+  const auth = useAuthStore()
+  if (!token) {
+    auth.clearTokens()
+    return
+  }
+  auth.accessToken = token
 })
