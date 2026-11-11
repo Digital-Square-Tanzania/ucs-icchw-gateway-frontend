@@ -4,8 +4,8 @@
       <div>
         <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Activations by category</h3>
         <p class="text-xs text-gray-500 dark:text-gray-400">
-          One row per CHW (not per old slug). Resends column is total resends across all slugs for that account.
-          Rows with placeholder email (unknown@example.com) are listed but cannot be resent until HRHIS has a real email.
+          One row per CHW. Resends is the total for that account, including earlier slugs, not the counter on the current link alone.
+          Placeholder emails (unknown@example.com) are listed but cannot be resent until HRHIS has a real email.
         </p>
         <p v-if="scopeLabel" class="mt-1 text-xs text-ucs-700 dark:text-ucs-300">
           Filtered to {{ scopeLabel }}.
@@ -48,31 +48,34 @@
         <table class="min-w-full text-sm">
           <thead class="sticky top-0 bg-gray-50 dark:bg-ucs-900 text-xs uppercase text-gray-500">
             <tr>
-              <th class="px-3 py-2 text-left">Name</th>
-              <th class="px-3 py-2 text-left">Email</th>
-              <th class="px-3 py-2 text-left">Sent on</th>
-              <th class="px-3 py-2 text-left">Expires</th>
-              <th class="px-3 py-2 text-right">Resends</th>
-              <th class="px-3 py-2 text-right">Action</th>
+              <th
+                v-for="col in columns"
+                :key="col.key"
+                class="px-3 py-2"
+                :class="col.align === 'right' ? 'text-right' : 'text-left'">
+                {{ col.label }}
+              </th>
             </tr>
           </thead>
           <tbody>
             <tr v-for="row in rows" :key="row.id" class="border-t border-gray-100 dark:border-ucs-800">
-              <td class="px-3 py-2">{{ row.fullName || '—' }}</td>
-              <td class="px-3 py-2 font-mono text-xs">{{ row.email }}</td>
-              <td class="px-3 py-2 text-xs">{{ formatDate(row.createdAt) }}</td>
-              <td class="px-3 py-2 text-xs">{{ formatDate(row.expiryDate) }}</td>
-              <td class="px-3 py-2 text-right tabular-nums">{{ row.resendCount ?? 0 }}</td>
-              <td class="px-3 py-2 text-right">
-                <button
-                  v-if="canResendRow(row)"
-                  type="button"
-                  class="rounded-md bg-ucs-500 px-2 py-1 text-xs text-white hover:bg-ucs-600 disabled:opacity-50"
-                  :disabled="resendingId === row.id"
-                  @click="resendRow(row)">
-                  {{ resendingId === row.id ? '…' : 'Resend' }}
-                </button>
-                <span v-else class="text-xs text-gray-400">—</span>
+              <td
+                v-for="col in columns"
+                :key="col.key"
+                class="px-3 py-2"
+                :class="cellClass(col)">
+                <template v-if="col.key === 'action'">
+                  <button
+                    v-if="canResendRow(row)"
+                    type="button"
+                    class="rounded-md bg-ucs-500 px-2 py-1 text-xs text-white hover:bg-ucs-600 disabled:opacity-50"
+                    :disabled="resendingId === row.id"
+                    @click="resendRow(row)">
+                    {{ resendingId === row.id ? '…' : 'Resend' }}
+                  </button>
+                  <span v-else class="text-xs text-gray-400">—</span>
+                </template>
+                <template v-else>{{ cellValue(row, col.key) }}</template>
               </td>
             </tr>
           </tbody>
@@ -122,17 +125,66 @@ interface ActivationRow {
   fullName: string | null
   createdAt: string
   expiryDate: string
+  firstSentAt?: string | null
+  lastSentAt?: string | null
+  firstExpiredAt?: string | null
+  usedAt?: string | null
+  activatedAt?: string | null
   isUsed: boolean
   isResent: boolean
   resendCount: number
 }
 
+type ColumnKey =
+  | 'name'
+  | 'email'
+  | 'sentOn'
+  | 'expiresOn'
+  | 'expiredOn'
+  | 'firstSentOn'
+  | 'lastSentOn'
+  | 'activatedOn'
+  | 'resends'
+  | 'action'
+
 const categories: { id: ActivationCategory; label: string }[] = [
   { id: 'open', label: 'Open (valid slug)' },
   { id: 'expired', label: 'Expired' },
-  { id: 'expired_resent', label: 'Expired & resent' },
+  { id: 'expired_resent', label: 'Resent' },
   { id: 'activated', label: 'Activated' },
 ]
+
+const columnsByCategory: Record<ActivationCategory, { key: ColumnKey; label: string; align?: 'right' }[]> = {
+  open: [
+    { key: 'name', label: 'Name' },
+    { key: 'email', label: 'Email' },
+    { key: 'sentOn', label: 'Sent on' },
+    { key: 'expiresOn', label: 'Expires on' },
+    { key: 'resends', label: 'Resends', align: 'right' },
+    { key: 'action', label: 'Action', align: 'right' },
+  ],
+  expired: [
+    { key: 'name', label: 'Name' },
+    { key: 'email', label: 'Email' },
+    { key: 'sentOn', label: 'Sent on' },
+    { key: 'expiredOn', label: 'Expired on' },
+    { key: 'action', label: 'Action', align: 'right' },
+  ],
+  expired_resent: [
+    { key: 'name', label: 'Name' },
+    { key: 'email', label: 'Email' },
+    { key: 'firstSentOn', label: 'First sent on' },
+    { key: 'expiredOn', label: 'Expired on' },
+    { key: 'lastSentOn', label: 'Last sent on' },
+  ],
+  activated: [
+    { key: 'name', label: 'Name' },
+    { key: 'email', label: 'Email' },
+    { key: 'sentOn', label: 'Sent on' },
+    { key: 'activatedOn', label: 'Activated on' },
+    { key: 'resends', label: 'Resends', align: 'right' },
+  ],
+}
 
 const activeCategory = ref<ActivationCategory>('open')
 const panelOpen = ref(false)
@@ -146,9 +198,46 @@ const activeLabel = computed(
   () => categories.find((c) => c.id === activeCategory.value)?.label ?? 'Activations',
 )
 
-function formatDate(value: string) {
+const columns = computed(() => columnsByCategory[activeCategory.value])
+
+function formatDate(value: string | null | undefined) {
+  if (!value) return '—'
   const d = new Date(value)
   return Number.isNaN(d.getTime()) ? value : d.toLocaleString()
+}
+
+function cellClass(col: { key: ColumnKey; align?: 'right' }) {
+  return [
+    col.align === 'right' ? 'text-right' : 'text-left',
+    col.key === 'email' ? 'font-mono text-xs' : '',
+    col.key === 'resends' ? 'tabular-nums' : '',
+    col.key !== 'name' && col.key !== 'action' ? 'text-xs' : '',
+  ]
+}
+
+function cellValue(row: ActivationRow, key: ColumnKey) {
+  switch (key) {
+    case 'name':
+      return row.fullName || '—'
+    case 'email':
+      return row.email || '—'
+    case 'sentOn':
+      return formatDate(row.createdAt)
+    case 'expiresOn':
+      return formatDate(row.expiryDate)
+    case 'expiredOn':
+      return formatDate(activeCategory.value === 'expired_resent' ? row.firstExpiredAt : row.expiryDate)
+    case 'firstSentOn':
+      return formatDate(row.firstSentAt || row.createdAt)
+    case 'lastSentOn':
+      return formatDate(row.lastSentAt || row.createdAt)
+    case 'activatedOn':
+      return formatDate(row.activatedAt || row.usedAt)
+    case 'resends':
+      return String(row.resendCount ?? 0)
+    default:
+      return ''
+  }
 }
 
 const PLACEHOLDER_EMAILS = new Set(['unknown@example.com'])
