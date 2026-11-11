@@ -5,15 +5,19 @@
     <p class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-2">
       Team role (OpenMRS)
     </p>
+    <p v-if="!creatableRoles.length" class="text-sm text-gray-500 dark:text-gray-400">
+      iCCHW accounts are registered from HRHIS, and Peer Educators from the peers app. No other OpenMRS team role is available to create here.
+    </p>
     <SelectButton
+      v-else
       id="teamRole"
       v-model="form.selectedRole"
-      :options="teamRoles.map((role) => ({ label: role.name, value: role.uuid }))"
+      :options="creatableRoles.map((role) => ({ label: role.name, value: role.uuid }))"
       optionLabel="label"
       optionValue="value" />
   </div>
 
-  <div id="table-bg" class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4">
+  <div v-if="creatableRoles.length" id="table-bg" class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4">
     <form @submit.prevent="submitOpenMrsForm" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10 gap-y-20">
       <div>
         <label for="firstName">First Name</label>
@@ -30,7 +34,7 @@
         <InputText id="lastName" v-model="form.lastName" class="w-full" required size="large" />
       </div>
 
-      <div v-if="form.selectedRole === icchwRoleUuid">
+      <div v-if="creatableRoles.length">
         <label for="nin">NIN</label>
         <InputMask
           id="nin"
@@ -120,13 +124,14 @@
 
 <script setup lang="ts">
 import PageTitle from "@/components/layout/PageTitle.vue";
-import { onMounted, ref, watch } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 import { InputText, Select, Button, InputMask, Message, SelectButton } from "primevue";
 import AutoComplete from "primevue/autocomplete";
 import ApiClient from "@/utilities/ApiClient";
 import { useAuthStore } from "@/stores/auth";
 import { useToast } from "primevue/usetoast";
 import { useRouter } from "vue-router";
+import { isExternallyManagedOpenMrsRole } from "@/utils/openmrsManagedRoles";
 
 interface Facility {
   name: string;
@@ -141,19 +146,21 @@ const apiClient = new ApiClient(authStore.accessToken);
 const toast = useToast();
 const router = useRouter();
 
-const teamRoles = ref<Array<{ uuid: string; name: string }>>([]);
-const icchwRoleUuid = import.meta.env.VITE_OPENMRS_ICCHW_TEAM_ROLE_UUID;
+const teamRoles = ref<Array<{ uuid: string; name: string; identifier?: string | null }>>([]);
+const creatableRoles = computed(() => teamRoles.value.filter((role) => !isExternallyManagedOpenMrsRole(role)));
 const phoneTaken = ref(false);
 
 onMounted(async () => {
   try {
     await apiClient.get("/auth/me");
     const teamRolesResponse = await apiClient.get("/openmrs/teamrole");
-    const typedData = teamRolesResponse.data as { data: Array<{ uuid: string; name: string }> };
+    const typedData = teamRolesResponse.data as {
+      data: Array<{ uuid: string; name: string; identifier?: string | null }>;
+    };
     teamRoles.value = typedData.data || [];
-    if (teamRoles.value.length && !form.value.selectedRole) {
-      const defaultRole = teamRoles.value.find((r) => r.uuid === icchwRoleUuid) || teamRoles.value[0];
-      form.value.selectedRole = defaultRole?.uuid || "";
+    const allowed = teamRoles.value.filter((role) => !isExternallyManagedOpenMrsRole(role));
+    if (allowed.length && !allowed.some((role) => role.uuid === form.value.selectedRole)) {
+      form.value.selectedRole = allowed[0].uuid;
     }
   } catch (error) {
     if ((error as { response?: { status?: number } }).response?.status === 401) {
@@ -312,11 +319,21 @@ const handlePhoneBlur = async () => {
 const submitOpenMrsForm = async () => {
   authStore.loading = true;
   formatPhoneNumber();
-  if (form.value.selectedRole === icchwRoleUuid && !form.value.phoneNumber) {
+  if (!creatableRoles.value.some((role) => role.uuid === form.value.selectedRole)) {
+    toast.add({
+      severity: "error",
+      summary: "Cannot create this role",
+      detail: "iCCHW accounts come from HRHIS, and Peer Educators from the peers app.",
+      life: 4000,
+    });
     authStore.loading = false;
     return;
   }
-  if (form.value.selectedRole === icchwRoleUuid && !validateNIN()) {
+  if (!form.value.phoneNumber) {
+    authStore.loading = false;
+    return;
+  }
+  if (!validateNIN()) {
     authStore.loading = false;
     return;
   }

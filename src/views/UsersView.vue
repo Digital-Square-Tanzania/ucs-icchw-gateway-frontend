@@ -60,6 +60,9 @@
             <p v-else-if="!openMrsTeamRoles.length" class="text-xs text-amber-600 dark:text-amber-400">
               No team roles in the database. Sync team roles from Settings.
             </p>
+            <p v-if="managedRoleNotice" class="text-xs text-gray-500 dark:text-gray-400">
+              {{ managedRoleNotice }}
+            </p>
           </div>
         </div>
 
@@ -146,6 +149,10 @@ import ApiClient from "@/utilities/ApiClient";
 import { useAuthStore } from "@/stores/auth";
 import { useToast } from "primevue";
 import UserDetailsDialog from "@/components/dialogs/UserDetailsDialog.vue";
+import {
+  isExternallyManagedOpenMrsRole,
+  isPeerEducatorRole,
+} from "@/utils/openmrsManagedRoles";
 
 type SystemCode = "openmrs" | "dhis2" | "manager";
 
@@ -167,7 +174,7 @@ const systemTitle = ref("OpenMRS");
 const currentSystem = ref<SystemCode>("openmrs");
 const shouldJumpToLastPage = ref(false);
 
-const openMrsTeamRoles = ref<Array<{ uuid: string; name: string }>>([]);
+const openMrsTeamRoles = ref<Array<{ uuid: string; name: string; identifier?: string | null }>>([]);
 const openMrsRolesLoading = ref(false);
 const selectedOpenMrsRole = ref<string | null>(null);
 
@@ -213,8 +220,23 @@ const systems = [
 const showDialog = ref(false);
 const selectedUser = ref<string | null>(null);
 
+const selectedOpenMrsRoleRecord = computed(() =>
+  openMrsTeamRoles.value.find((role) => role.name === selectedOpenMrsRole.value) ?? null,
+);
+
+const managedRoleNotice = computed(() => {
+  const role = selectedOpenMrsRoleRecord.value;
+  if (currentSystem.value !== "openmrs" || !role || !isExternallyManagedOpenMrsRole(role)) return "";
+  if (isPeerEducatorRole(role)) {
+    return "Peer Educators are registered in the peers app. This list is view only.";
+  }
+  return "iCCHW accounts are registered from HRHIS. This list is view only.";
+});
+
 const canAddUser = computed(
-  () => currentSystem.value === "openmrs" || currentSystem.value === "manager",
+  () =>
+    currentSystem.value === "manager" ||
+    (currentSystem.value === "openmrs" && !managedRoleNotice.value),
 );
 
 function tabButtonClass(code: SystemCode) {
@@ -326,6 +348,7 @@ async function fetchOpenMrsRoles() {
     }>("/openmrs/teamrole");
     openMrsTeamRoles.value = (response.data.data || [])
       .filter((r) => r?.name)
+      .map((r) => ({ uuid: r.uuid, name: r.name, identifier: (r as { identifier?: string | null }).identifier }))
       .sort((a, b) => a.name.localeCompare(b.name));
   } catch (error) {
     console.error("Error fetching OpenMRS team roles:", error);
