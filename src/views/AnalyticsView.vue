@@ -1,29 +1,21 @@
 <template>
-  <PageTitle
-    heading="Analytics"
-    subtext="Council-scoped HRHIS register payload analysis from api_logs" />
+  <PageTitle heading="Analytics" subtext="Analysis of HRHIS incoming registrations" />
 
   <article class="rounded-xl border border-gray-200 dark:border-ucs-800 bg-white dark:bg-ucs-900/40 p-5 shadow-sm">
-    <CouncilHierarchyHero
-      v-if="councilLocked"
-      :region="selectedRegion"
-      :district="selectedDistrict"
+    <CouncilHierarchyHero v-if="councilLocked" :region="selectedRegion" :district="selectedDistrict"
       :council="selectedCouncil"
       subtitle="HRHIS register analytics, incoming volume, failures, and recoveries for your council." />
 
     <template v-else>
       <h2 class="text-base font-semibold text-gray-900 dark:text-white">Council scope</h2>
       <p class="mt-2 text-sm text-gray-600 dark:text-gray-300">
-        Pick Region → District → Council, then run analytics. Data covers
-        <code class="text-xs">POST /chw/register</code> GatewayResponder rows (one row per HTTP
-        attempt) plus internal update action logs.
+        Pick Region → District → Council, then run analytics.
       </p>
 
       <div class="mt-4 grid gap-3 sm:grid-cols-3">
         <div>
           <label class="block text-xs text-gray-600 dark:text-gray-300 mb-1">Region</label>
-          <select
-            v-model="selectedRegion"
+          <select v-model="selectedRegion"
             class="w-full rounded-lg border border-gray-300 dark:border-ucs-700 bg-white dark:bg-ucs-900 px-2 py-1.5 text-sm"
             @change="onRegionChange">
             <option value="">Select region</option>
@@ -32,9 +24,7 @@
         </div>
         <div>
           <label class="block text-xs text-gray-600 dark:text-gray-300 mb-1">District</label>
-          <select
-            v-model="selectedDistrict"
-            :disabled="!selectedRegion"
+          <select v-model="selectedDistrict" :disabled="!selectedRegion"
             class="w-full rounded-lg border border-gray-300 dark:border-ucs-700 bg-white dark:bg-ucs-900 px-2 py-1.5 text-sm disabled:opacity-60"
             @change="onDistrictChange">
             <option value="">Select district</option>
@@ -43,9 +33,7 @@
         </div>
         <div>
           <label class="block text-xs text-gray-600 dark:text-gray-300 mb-1">Council</label>
-          <select
-            v-model="selectedCouncil"
-            :disabled="!selectedDistrict"
+          <select v-model="selectedCouncil" :disabled="!selectedDistrict"
             class="w-full rounded-lg border border-gray-300 dark:border-ucs-700 bg-white dark:bg-ucs-900 px-2 py-1.5 text-sm disabled:opacity-60">
             <option value="">Select council</option>
             <option v-for="c in councils" :key="c" :value="c">{{ c }}</option>
@@ -57,8 +45,7 @@
     <div class="mt-3 flex flex-wrap items-end gap-3">
       <div>
         <label class="block text-xs text-gray-600 dark:text-gray-300 mb-1">Lookback</label>
-        <select
-          v-model.number="days"
+        <select v-model.number="days"
           class="rounded-lg border border-gray-300 dark:border-ucs-700 bg-white dark:bg-ucs-900 px-2 py-1.5 text-sm"
           @change="onLookbackChange">
           <option :value="30">Last 30 days</option>
@@ -68,9 +55,7 @@
           <option :value="0">Over 365 days</option>
         </select>
       </div>
-      <button
-        type="button"
-        :disabled="!selectedCouncil || loading"
+      <button type="button" :disabled="!selectedCouncil || loading"
         class="rounded-lg bg-ucs-500 px-4 py-2 text-sm font-medium text-white hover:bg-ucs-600 disabled:opacity-50 disabled:cursor-not-allowed"
         @click="runAnalytics()">
         {{ loading ? 'Running…' : 'Run analytics' }}
@@ -79,22 +64,15 @@
     <template v-if="!councilLocked">
       <p v-if="hierarchyLoading" class="mt-3 text-xs text-gray-500 dark:text-gray-400">Loading regions…</p>
       <p v-else-if="hierarchyError" class="mt-3 text-sm text-red-600 dark:text-red-400">{{ hierarchyError }}</p>
-      <p
-        v-else-if="!regions.length"
-        class="mt-3 text-sm text-amber-700 dark:text-amber-300">
+      <p v-else-if="!regions.length" class="mt-3 text-sm text-amber-700 dark:text-amber-300">
         No regions loaded. Ask an admin to run Settings → Advanced → Sync Locations (full), then Refresh Location
         Hierarchy View.
       </p>
     </template>
   </article>
 
-  <HrhisRegistrationsSection
-    v-if="selectedCouncil"
-    class="mt-6"
-    :region="selectedRegion"
-    :district="selectedDistrict"
-    :council="selectedCouncil"
-    :days="days" />
+  <HrhisRegistrationsSection v-if="selectedCouncil" class="mt-6" :region="selectedRegion" :district="selectedDistrict"
+    :council="selectedCouncil" :days="days" />
 
   <p v-if="error" class="mt-4 text-sm text-red-600 dark:text-red-400">{{ error }}</p>
 
@@ -108,9 +86,7 @@
         </p>
       </div>
       <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <div
-          v-for="card in summaryCards"
-          :key="card.label"
+        <div v-for="card in summaryCards" :key="card.label"
           class="rounded-xl border border-gray-200 dark:border-ucs-800 bg-white dark:bg-ucs-900/40 p-4 shadow-sm">
           <p class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ card.label }}</p>
           <p class="mt-1 text-2xl font-semibold text-gray-900 dark:text-white">{{ card.value }}</p>
@@ -121,22 +97,17 @@
 
     <section class="mt-8">
       <div class="flex flex-wrap gap-2 mb-4">
-        <button
-          v-for="tab in tabs"
-          :key="tab.id"
-          type="button"
-          class="rounded-lg px-3 py-1.5 text-sm font-medium transition-colors"
-          :class="
-            activeTab === tab.id
-              ? 'bg-ucs-500 text-white'
-              : 'border border-gray-300 dark:border-ucs-700 text-gray-700 dark:text-ucs-200 hover:bg-gray-50 dark:hover:bg-ucs-950'
-          "
-          @click="activeTab = tab.id">
+        <button v-for="tab in tabs" :key="tab.id" type="button"
+          class="rounded-lg px-3 py-1.5 text-sm font-medium transition-colors" :class="activeTab === tab.id
+            ? 'bg-ucs-500 text-white'
+            : 'border border-gray-300 dark:border-ucs-700 text-gray-700 dark:text-ucs-200 hover:bg-gray-50 dark:hover:bg-ucs-950'
+            " @click="activeTab = tab.id">
           {{ tab.label }} ({{ tab.count }})
         </button>
       </div>
 
-      <div class="overflow-x-auto rounded-xl border border-gray-200 dark:border-ucs-800 bg-white dark:bg-ucs-900/40 shadow-sm">
+      <div
+        class="overflow-x-auto rounded-xl border border-gray-200 dark:border-ucs-800 bg-white dark:bg-ucs-900/40 shadow-sm">
         <!-- Accepted -->
         <table v-if="activeTab === 'accepted'" class="w-full table-fixed text-sm">
           <thead class="bg-gray-50 dark:bg-ucs-950/60 text-left text-xs uppercase text-gray-500">
@@ -207,12 +178,14 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="row in data.updates" :key="row.logId" class="border-t border-gray-100 dark:border-ucs-800 align-top">
+              <tr v-for="row in data.updates" :key="row.logId"
+                class="border-t border-gray-100 dark:border-ucs-800 align-top">
                 <td class="px-3 py-2 whitespace-nowrap">{{ formatDate(row.createdAt) }}</td>
                 <td class="px-3 py-2 font-mono text-xs break-all">{{ row.nin || '—' }}</td>
                 <td class="px-3 py-2">{{ row.updateNumber }} / {{ row.totalUpdatesForNin }}</td>
                 <td class="px-3 py-2">{{ row.updatedFields?.join(', ') || '—' }}</td>
-                <td class="px-3 py-2 font-mono text-xs whitespace-pre-wrap break-words">{{ formatFieldChanges(row.fieldChanges) }}</td>
+                <td class="px-3 py-2 font-mono text-xs whitespace-pre-wrap break-words">{{
+                  formatFieldChanges(row.fieldChanges) }}</td>
                 <td class="px-3 py-2 text-xs">{{ row.action }}</td>
               </tr>
               <tr v-if="!data.updates.length">
@@ -220,8 +193,7 @@
               </tr>
             </tbody>
           </table>
-          <p
-            v-if="data.updates.length"
+          <p v-if="data.updates.length"
             class="px-3 py-2 text-xs text-gray-500 dark:text-gray-400 border-t border-gray-100 dark:border-ucs-800">
             Updates from before this enhancement may show new values only (old values were not stored historically).
           </p>
@@ -245,15 +217,13 @@
               <td class="px-3 py-2 font-mono text-xs break-all">{{ row.nin }}</td>
               <td class="px-3 py-2">{{ row.submissionCount }}</td>
               <td class="px-3 py-2">
-                <span
-                  class="rounded px-1.5 py-0.5 text-xs"
+                <span class="rounded px-1.5 py-0.5 text-xs"
                   :class="row.openCount ? 'bg-amber-500/20 text-amber-800 dark:text-amber-200' : 'text-gray-500'">
                   {{ row.openCount ?? row.submissionCount }}
                 </span>
               </td>
               <td class="px-3 py-2">
-                <span
-                  v-if="row.resolvedCount"
+                <span v-if="row.resolvedCount"
                   class="rounded bg-green-500/20 px-1.5 py-0.5 text-xs text-green-800 dark:text-green-200">
                   {{ row.resolvedCount }}
                 </span>
@@ -262,8 +232,7 @@
               <td class="px-3 py-2 whitespace-nowrap">{{ formatDate(row.firstAt) }}</td>
               <td class="px-3 py-2 whitespace-nowrap">{{ formatDate(row.lastAt) }}</td>
               <td class="px-3 py-2">
-                <button
-                  type="button"
+                <button type="button"
                   class="cursor-pointer rounded-lg border border-ucs-500 px-2 py-1 text-xs font-medium text-ucs-700 hover:bg-ucs-500/10 dark:text-ucs-200"
                   @click="openDuplicateDialog(row.nin)">
                   Review
@@ -271,7 +240,8 @@
               </td>
             </tr>
             <tr v-if="!data.duplicates.length">
-              <td colspan="7" class="px-3 py-6 text-center text-gray-500">No duplicate NIN submissions in this period.</td>
+              <td colspan="7" class="px-3 py-6 text-center text-gray-500">No duplicate NIN submissions in this period.
+              </td>
             </tr>
           </tbody>
         </table>
@@ -285,10 +255,7 @@
     </section>
   </template>
 
-  <DuplicateResolutionDialog
-    v-model="duplicateDialogOpen"
-    :scope="duplicateScope"
-    :nin="duplicateNin"
+  <DuplicateResolutionDialog v-model="duplicateDialogOpen" :scope="duplicateScope" :nin="duplicateNin"
     @resolved="onDuplicateResolved" />
 </template>
 

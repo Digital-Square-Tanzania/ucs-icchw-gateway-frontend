@@ -4,18 +4,14 @@
     <div>
       <div class="flex items-center justify-between mb-2">
         <h3 class="text-base font-semibold text-gray-900 dark:text-white">Activation Metrics</h3>
-        <button
-          type="button"
-          :disabled="loadingStats"
+        <button type="button" :disabled="loadingStats"
           class="rounded-lg bg-ucs-500 px-3 py-1.5 text-sm font-medium text-white hover:bg-ucs-600 disabled:opacity-60 transition-colors"
           @click="loadStats">
           {{ loadingStats ? 'Refreshing…' : 'Refresh metrics' }}
         </button>
       </div>
       <div class="grid gap-3 grid-cols-2 lg:grid-cols-3">
-        <div
-          v-for="card in statCards"
-          :key="card.key"
+        <div v-for="card in statCards" :key="card.key"
           class="rounded-xl border border-gray-200 dark:border-ucs-800 bg-white dark:bg-ucs-900/40 p-4">
           <p class="text-[0.7rem] uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ card.label }}</p>
           <p class="mt-1 text-2xl font-semibold" :class="card.color">{{ stats ? stats[card.key] : '—' }}</p>
@@ -24,18 +20,16 @@
     </div>
 
     <!-- Location filter -->
-    <div
-      v-if="!councilLocked"
+    <div v-if="!councilLocked"
       class="rounded-xl border border-gray-200 dark:border-ucs-800 bg-gray-50 dark:bg-ucs-900/30 p-4">
       <h3 class="text-sm font-semibold text-gray-700 dark:text-ucs-200 mb-1">Resend location</h3>
       <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">
-        Pick Region → District → Council to scope metrics, the category list, and enable resends. Batches target that council only.
+        Pick Region → District → Council to scope metrics, the category list, and enable resends.
       </p>
       <div class="grid gap-3 sm:grid-cols-3">
         <div>
           <label class="block text-xs text-gray-600 dark:text-gray-300 mb-1">Region</label>
-          <select
-            v-model="selectedRegion"
+          <select v-model="selectedRegion"
             class="w-full rounded-lg border border-gray-300 dark:border-ucs-700 bg-white dark:bg-ucs-900 px-2 py-1.5 text-sm text-gray-900 dark:text-ucs-100"
             @change="onRegionChange">
             <option value="">Select region</option>
@@ -44,9 +38,7 @@
         </div>
         <div>
           <label class="block text-xs text-gray-600 dark:text-gray-300 mb-1">District</label>
-          <select
-            v-model="selectedDistrict"
-            :disabled="!selectedRegion"
+          <select v-model="selectedDistrict" :disabled="!selectedRegion"
             class="w-full rounded-lg border border-gray-300 dark:border-ucs-700 bg-white dark:bg-ucs-900 px-2 py-1.5 text-sm text-gray-900 dark:text-ucs-100 disabled:opacity-60"
             @change="onDistrictChange">
             <option value="">Select district</option>
@@ -55,9 +47,7 @@
         </div>
         <div>
           <label class="block text-xs text-gray-600 dark:text-gray-300 mb-1">Council</label>
-          <select
-            v-model="selectedCouncil"
-            :disabled="!selectedDistrict"
+          <select v-model="selectedCouncil" :disabled="!selectedDistrict"
             class="w-full rounded-lg border border-gray-300 dark:border-ucs-700 bg-white dark:bg-ucs-900 px-2 py-1.5 text-sm text-gray-900 dark:text-ucs-100 disabled:opacity-60"
             @change="onCouncilChange">
             <option value="">Select council</option>
@@ -75,15 +65,9 @@
           Resend for ACTIVATION slugs that expired, are unused, and were never resent.
         </p>
         <label class="mt-3 block text-xs text-gray-600 dark:text-gray-300">Batch size (emails)</label>
-        <input
-          v-model.number="expiredLimit"
-          type="number"
-          min="1"
-          max="500"
+        <input v-model.number="expiredLimit" type="number" min="1" max="500"
           class="mt-1 w-full rounded-lg border border-gray-300 dark:border-ucs-700 bg-white dark:bg-ucs-900 px-2 py-1.5 text-sm text-gray-900 dark:text-ucs-100" />
-        <button
-          type="button"
-          :disabled="!selectedCouncil || resendingExpired"
+        <button type="button" :disabled="!selectedCouncil || resendingExpired"
           class="mt-3 rounded-lg bg-ucs-500 px-4 py-2 text-sm font-medium text-white hover:bg-ucs-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           @click="resend('expired')">
           {{ resendingExpired ? 'Sending…' : 'Resend Expired Batch' }}
@@ -97,15 +81,9 @@
           Resend for ACTIVATION slugs that are still valid (not expired) and unused.
         </p>
         <label class="mt-3 block text-xs text-gray-600 dark:text-gray-300">Batch size (emails)</label>
-        <input
-          v-model.number="openLimit"
-          type="number"
-          min="1"
-          max="500"
+        <input v-model.number="openLimit" type="number" min="1" max="500"
           class="mt-1 w-full rounded-lg border border-gray-300 dark:border-ucs-700 bg-white dark:bg-ucs-900 px-2 py-1.5 text-sm text-gray-900 dark:text-ucs-100" />
-        <button
-          type="button"
-          :disabled="!selectedCouncil || resendingOpen"
+        <button type="button" :disabled="!selectedCouncil || resendingOpen"
           class="mt-3 rounded-lg bg-amber-600 px-4 py-2 text-sm font-medium text-white hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           @click="resend('open')">
           {{ resendingOpen ? 'Sending…' : 'Resend Open Batch' }}
@@ -115,13 +93,13 @@
     </div>
 
     <!-- Scheduler -->
-    <div v-if="showScheduler" class="rounded-xl border border-gray-200 dark:border-ucs-800 bg-white dark:bg-ucs-900/40 p-4">
+    <div v-if="showScheduler"
+      class="rounded-xl border border-gray-200 dark:border-ucs-800 bg-white dark:bg-ucs-900/40 p-4">
       <h3 class="text-sm font-semibold text-gray-900 dark:text-white mb-3">Daily Batch Scheduler</h3>
       <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <div>
           <label class="block text-xs text-gray-600 dark:text-gray-300 mb-1">Enabled</label>
-          <select
-            v-model="schedule.enabled"
+          <select v-model="schedule.enabled"
             class="w-full rounded-lg border border-gray-300 dark:border-ucs-700 bg-white dark:bg-ucs-900 px-2 py-1.5 text-sm text-gray-900 dark:text-ucs-100">
             <option :value="true">Yes</option>
             <option :value="false">No</option>
@@ -129,35 +107,21 @@
         </div>
         <div>
           <label class="block text-xs text-gray-600 dark:text-gray-300 mb-1">Batch size</label>
-          <input
-            v-model.number="schedule.batchSize"
-            type="number"
-            min="1"
-            max="1000"
+          <input v-model.number="schedule.batchSize" type="number" min="1" max="1000"
             class="w-full rounded-lg border border-gray-300 dark:border-ucs-700 bg-white dark:bg-ucs-900 px-2 py-1.5 text-sm text-gray-900 dark:text-ucs-100" />
         </div>
         <div>
           <label class="block text-xs text-gray-600 dark:text-gray-300 mb-1">Iterations</label>
-          <input
-            v-model.number="schedule.maxIterations"
-            type="number"
-            min="1"
-            max="20"
+          <input v-model.number="schedule.maxIterations" type="number" min="1" max="20"
             class="w-full rounded-lg border border-gray-300 dark:border-ucs-700 bg-white dark:bg-ucs-900 px-2 py-1.5 text-sm text-gray-900 dark:text-ucs-100" />
         </div>
         <div>
           <label class="block text-xs text-gray-600 dark:text-gray-300 mb-1">Delay (ms)</label>
-          <input
-            v-model.number="schedule.delayMsBetweenIterations"
-            type="number"
-            min="0"
-            step="1000"
+          <input v-model.number="schedule.delayMsBetweenIterations" type="number" min="0" step="1000"
             class="w-full rounded-lg border border-gray-300 dark:border-ucs-700 bg-white dark:bg-ucs-900 px-2 py-1.5 text-sm text-gray-900 dark:text-ucs-100" />
         </div>
       </div>
-      <button
-        type="button"
-        :disabled="savingSchedule"
+      <button type="button" :disabled="savingSchedule"
         class="mt-3 rounded-lg bg-ucs-500 px-4 py-2 text-sm font-medium text-white hover:bg-ucs-600 disabled:opacity-60 transition-colors"
         @click="saveSchedule">
         {{ savingSchedule ? 'Saving…' : 'Save Schedule' }}
@@ -165,26 +129,21 @@
     </div>
 
     <!-- Activity matrix (activation slugs only — not HRHIS register volume) -->
-    <div v-if="matrix.length" class="rounded-xl border border-gray-200 dark:border-ucs-800 bg-white dark:bg-ucs-900/40 p-4">
+    <div v-if="matrix.length"
+      class="rounded-xl border border-gray-200 dark:border-ucs-800 bg-white dark:bg-ucs-900/40 p-4">
       <h3 class="text-sm font-semibold text-gray-900 dark:text-white mb-1">Recent activation activity</h3>
       <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">
-        Activation email slugs created per day (last {{ matrixDays }} days). Hover a square for the date and count.
-        For HRHIS register volume vs successful accounts, see the <strong>HRHIS Registrations</strong> chart at the top of Settings.
+        Activation email slugs created per day (last {{ matrixDays }} days).
+        For HRHIS register volume vs successful accounts, see the <strong>HRHIS Registrations</strong> chart at the top
+        of Settings.
       </p>
       <div class="relative flex flex-wrap gap-1">
-        <button
-          v-for="cell in matrix"
-          :key="cell.date"
-          type="button"
+        <button v-for="cell in matrix" :key="cell.date" type="button"
           class="h-4 w-4 rounded-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ucs-500"
-          :style="{ backgroundColor: cellColor(cell.count) }"
-          :aria-label="matrixTooltip(cell)"
-          @mouseenter="matrixHover = cell"
-          @mouseleave="matrixHover = null"
-          @focus="matrixHover = cell"
+          :style="{ backgroundColor: cellColor(cell.count) }" :aria-label="matrixTooltip(cell)"
+          @mouseenter="matrixHover = cell" @mouseleave="matrixHover = null" @focus="matrixHover = cell"
           @blur="matrixHover = null"></button>
-        <div
-          v-if="matrixHover"
+        <div v-if="matrixHover"
           class="pointer-events-none absolute -top-8 left-0 z-10 rounded-md bg-gray-900 px-2 py-1 text-[0.7rem] text-white shadow-md dark:bg-gray-100 dark:text-gray-900">
           {{ matrixTooltip(matrixHover) }}
         </div>
@@ -465,7 +424,7 @@ function notifyError(summary: string, error: unknown) {
     typeof error === 'string'
       ? error
       : (error as { response?: { data?: { message?: string } } })?.response?.data?.message ||
-        (error instanceof Error ? error.message : String(error))
+      (error instanceof Error ? error.message : String(error))
   toast.add({ severity: 'error', summary, detail: message, life: 5000 })
 }
 

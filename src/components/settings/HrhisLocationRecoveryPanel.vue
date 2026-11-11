@@ -2,65 +2,52 @@
   <article class="rounded-xl border border-gray-200 dark:border-ucs-800 bg-white dark:bg-ucs-900/40 p-5 shadow-sm">
     <h3 class="text-base font-semibold text-gray-900 dark:text-white">HRHIS Location Failure Recovery</h3>
     <p class="mt-2 text-sm text-gray-600 dark:text-gray-300">
-      Scan failed <code class="text-xs">/chw/register</code> requests in
-      <code class="text-xs">api_logs</code> for a council where the error was a missing or invalid
-      <code class="text-xs">locationCode</code>, then reprocess them after locations are synced.
+      Scan failed HRHIS location codes within the selected council.
     </p>
 
     <div class="mt-4 rounded-lg border border-gray-200 dark:border-ucs-800 bg-gray-50 dark:bg-ucs-950/40 p-4">
-      <CouncilHierarchyHero
-        v-if="councilLocked"
-        class="mb-4"
-        :region="selectedRegion"
-        :district="selectedDistrict"
+      <CouncilHierarchyHero v-if="councilLocked" class="mb-4" :region="selectedRegion" :district="selectedDistrict"
         :council="selectedCouncil"
         subtitle="Scan and recover HRHIS register failures for location codes within your assigned council." />
 
       <template v-if="!councilLocked">
-      <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">
-        Pick Region → District → Council, then scan. Only location-related failures are listed; NINs that later
-        succeeded are excluded.
-      </p>
-      <div class="grid gap-3 sm:grid-cols-3">
-        <div>
-          <label class="block text-xs text-gray-600 dark:text-gray-300 mb-1">Region</label>
-          <select
-            v-model="selectedRegion"
-            class="w-full rounded-lg border border-gray-300 dark:border-ucs-700 bg-white dark:bg-ucs-900 px-2 py-1.5 text-sm text-gray-900 dark:text-ucs-100"
-            @change="onRegionChange">
-            <option value="">Select region</option>
-            <option v-for="r in regions" :key="r" :value="r">{{ r }}</option>
-          </select>
+        <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">
+          Pick Region → District → Council, then scan.
+        </p>
+        <div class="grid gap-3 sm:grid-cols-3">
+          <div>
+            <label class="block text-xs text-gray-600 dark:text-gray-300 mb-1">Region</label>
+            <select v-model="selectedRegion"
+              class="w-full rounded-lg border border-gray-300 dark:border-ucs-700 bg-white dark:bg-ucs-900 px-2 py-1.5 text-sm text-gray-900 dark:text-ucs-100"
+              @change="onRegionChange">
+              <option value="">Select region</option>
+              <option v-for="r in regions" :key="r" :value="r">{{ r }}</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs text-gray-600 dark:text-gray-300 mb-1">District</label>
+            <select v-model="selectedDistrict" :disabled="!selectedRegion"
+              class="w-full rounded-lg border border-gray-300 dark:border-ucs-700 bg-white dark:bg-ucs-900 px-2 py-1.5 text-sm text-gray-900 dark:text-ucs-100 disabled:opacity-60"
+              @change="onDistrictChange">
+              <option value="">Select district</option>
+              <option v-for="d in districts" :key="d" :value="d">{{ d }}</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs text-gray-600 dark:text-gray-300 mb-1">Council</label>
+            <select v-model="selectedCouncil" :disabled="!selectedDistrict"
+              class="w-full rounded-lg border border-gray-300 dark:border-ucs-700 bg-white dark:bg-ucs-900 px-2 py-1.5 text-sm text-gray-900 dark:text-ucs-100 disabled:opacity-60"
+              @change="clearScan">
+              <option value="">Select council</option>
+              <option v-for="c in councils" :key="c" :value="c">{{ c }}</option>
+            </select>
+          </div>
         </div>
-        <div>
-          <label class="block text-xs text-gray-600 dark:text-gray-300 mb-1">District</label>
-          <select
-            v-model="selectedDistrict"
-            :disabled="!selectedRegion"
-            class="w-full rounded-lg border border-gray-300 dark:border-ucs-700 bg-white dark:bg-ucs-900 px-2 py-1.5 text-sm text-gray-900 dark:text-ucs-100 disabled:opacity-60"
-            @change="onDistrictChange">
-            <option value="">Select district</option>
-            <option v-for="d in districts" :key="d" :value="d">{{ d }}</option>
-          </select>
-        </div>
-        <div>
-          <label class="block text-xs text-gray-600 dark:text-gray-300 mb-1">Council</label>
-          <select
-            v-model="selectedCouncil"
-            :disabled="!selectedDistrict"
-            class="w-full rounded-lg border border-gray-300 dark:border-ucs-700 bg-white dark:bg-ucs-900 px-2 py-1.5 text-sm text-gray-900 dark:text-ucs-100 disabled:opacity-60"
-            @change="clearScan">
-            <option value="">Select council</option>
-            <option v-for="c in councils" :key="c" :value="c">{{ c }}</option>
-          </select>
-        </div>
-      </div>
       </template>
       <div class="mt-3 flex flex-wrap items-end gap-3">
         <div>
           <label class="block text-xs text-gray-600 dark:text-gray-300 mb-1">Lookback</label>
-          <select
-            v-model.number="days"
+          <select v-model.number="days"
             class="rounded-lg border border-gray-300 dark:border-ucs-700 bg-white dark:bg-ucs-900 px-2 py-1.5 text-sm text-gray-900 dark:text-ucs-100"
             @change="clearScan">
             <option :value="30">Last 30 days</option>
@@ -69,16 +56,12 @@
             <option :value="365">Last 365 days</option>
           </select>
         </div>
-        <button
-          type="button"
-          :disabled="!selectedCouncil || scanning"
+        <button type="button" :disabled="!selectedCouncil || scanning"
           class="rounded-lg bg-ucs-500 px-4 py-2 text-sm font-medium text-white hover:bg-ucs-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           @click="runScan">
           {{ scanning ? 'Scanning…' : 'Check failed registrations' }}
         </button>
-        <button
-          type="button"
-          :disabled="!failures.length || recovering"
+        <button type="button" :disabled="!failures.length || recovering"
           class="rounded-lg border border-ucs-500 bg-ucs-50 px-4 py-2 text-sm font-medium text-ucs-800 hover:bg-ucs-100 dark:border-ucs-600 dark:bg-ucs-950/50 dark:text-ucs-100 dark:hover:bg-ucs-950 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           @click="runRecoverAll">
           {{ recoveringAll ? 'Recovering…' : `Recover all (${failures.length})` }}
@@ -88,8 +71,7 @@
 
     <p v-if="message" class="mt-3 text-xs" :class="messageClass">{{ message }}</p>
 
-    <div
-      v-if="batchProgress"
+    <div v-if="batchProgress"
       class="mt-3 rounded-lg border border-ucs-200 dark:border-ucs-800 bg-ucs-50/80 dark:bg-ucs-950/40 p-3">
       <div class="flex flex-wrap items-center justify-between gap-2 text-xs text-gray-700 dark:text-gray-300">
         <span>
@@ -104,13 +86,10 @@
         </span>
       </div>
       <div class="mt-2 h-2 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-ucs-800">
-        <div
-          class="h-full rounded-full bg-ucs-500 transition-all duration-300"
+        <div class="h-full rounded-full bg-ucs-500 transition-all duration-300"
           :style="{ width: `${batchProgressPercent}%` }" />
       </div>
-      <p
-        v-if="batchProgress.current"
-        class="mt-2 truncate text-[0.7rem] text-gray-500 dark:text-gray-400"
+      <p v-if="batchProgress.current" class="mt-2 truncate text-[0.7rem] text-gray-500 dark:text-gray-400"
         :title="batchProgress.current.message || ''">
         Last:
         {{ batchProgress.current.NIN || `log #${batchProgress.current.id}` }}
@@ -124,10 +103,7 @@
       <span class="rounded-md bg-gray-50 dark:bg-ucs-950/60 px-2 py-1.5">
         Eligible: <strong>{{ scanMeta.count }}</strong>
       </span>
-      <span
-        v-if="scanMeta.debug"
-        class="rounded-md bg-gray-50 dark:bg-ucs-950/60 px-2 py-1.5"
-        :title="prefixHint">
+      <span v-if="scanMeta.debug" class="rounded-md bg-gray-50 dark:bg-ucs-950/60 px-2 py-1.5" :title="prefixHint">
         Before council filter: <strong>{{ scanMeta.debug.locationFailuresBeforeCouncilFilter }}</strong>
       </span>
       <span v-if="recoverSummary" class="rounded-md bg-gray-50 dark:bg-ucs-950/60 px-2 py-1.5">
@@ -146,7 +122,8 @@
 
     <div v-if="failures.length" class="mt-4 overflow-x-auto rounded-lg border border-gray-200 dark:border-ucs-800">
       <table class="min-w-full text-left text-xs text-gray-700 dark:text-gray-300">
-        <thead class="bg-gray-50 dark:bg-ucs-950/60 text-[0.65rem] uppercase tracking-wide text-gray-500 dark:text-gray-400">
+        <thead
+          class="bg-gray-50 dark:bg-ucs-950/60 text-[0.65rem] uppercase tracking-wide text-gray-500 dark:text-gray-400">
           <tr>
             <th class="px-3 py-2 font-semibold">Date</th>
             <th class="px-3 py-2 font-semibold">NIN</th>
@@ -157,10 +134,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr
-            v-for="row in failures"
-            :key="row.id"
-            class="border-t border-gray-100 dark:border-ucs-800/80">
+          <tr v-for="row in failures" :key="row.id" class="border-t border-gray-100 dark:border-ucs-800/80">
             <td class="px-3 py-2 whitespace-nowrap">{{ formatDate(row.createdAt) }}</td>
             <td class="px-3 py-2 font-mono">{{ row.NIN || '—' }}</td>
             <td class="px-3 py-2">{{ row.name || '—' }}</td>
@@ -169,9 +143,7 @@
               {{ row.errorMessage || '—' }}
             </td>
             <td class="px-3 py-2 text-right whitespace-nowrap">
-              <button
-                type="button"
-                :disabled="recovering"
+              <button type="button" :disabled="recovering"
                 class="rounded-md border border-ucs-500 bg-white px-2.5 py-1 text-xs font-medium text-ucs-800 hover:bg-ucs-50 dark:border-ucs-600 dark:bg-ucs-950/40 dark:text-ucs-100 dark:hover:bg-ucs-950 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 @click="runRecoverOne(row)">
                 {{ recoveringId === row.id ? 'Recovering…' : 'Recover' }}

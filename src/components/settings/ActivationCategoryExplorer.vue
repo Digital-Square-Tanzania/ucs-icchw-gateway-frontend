@@ -4,8 +4,7 @@
       <div>
         <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Activations by category</h3>
         <p class="text-xs text-gray-500 dark:text-gray-400">
-          One row per CHW. Resends is the total for that account, including earlier slugs, not the counter on the current link alone.
-          Placeholder emails (unknown@example.com) are listed but cannot be resent until HRHIS has a real email.
+          Activations grouped by category.
         </p>
         <p v-if="scopeLabel" class="mt-1 text-xs text-ucs-700 dark:text-ucs-300">
           Filtered to {{ scopeLabel }}.
@@ -14,27 +13,18 @@
           All councils. Choose a council under Resend location to narrow this list.
         </p>
       </div>
-      <button
-        type="button"
-        class="rounded-lg border border-gray-300 dark:border-ucs-700 px-3 py-1.5 text-sm"
-        :disabled="loading"
-        @click="reload">
+      <button type="button" class="rounded-lg border border-gray-300 dark:border-ucs-700 px-3 py-1.5 text-sm"
+        :disabled="loading" @click="reload">
         {{ loading ? 'Loading…' : 'Refresh' }}
       </button>
     </div>
 
     <div class="flex flex-wrap gap-2 mb-4">
-      <button
-        v-for="cat in categories"
-        :key="cat.id"
-        type="button"
-        class="rounded-full px-3 py-1.5 text-xs font-medium border transition-colors"
-        :class="
-          activeCategory === cat.id
+      <button v-for="cat in categories" :key="cat.id" type="button"
+        class="rounded-full px-3 py-1.5 text-xs font-medium border transition-colors" :class="activeCategory === cat.id
             ? 'border-ucs-500 bg-ucs-500 text-white'
             : 'border-gray-300 dark:border-ucs-700 text-gray-700 dark:text-ucs-200 hover:border-ucs-400'
-        "
-        @click="openCategory(cat.id)">
+          " @click="openCategory(cat.id)">
         {{ cat.label }}
       </button>
     </div>
@@ -42,16 +32,14 @@
     <div v-if="panelOpen" class="rounded-lg border border-ucs-200 dark:border-ucs-700 overflow-hidden">
       <div class="flex items-center justify-between gap-2 bg-ucs-50 dark:bg-ucs-950/40 px-3 py-2">
         <p class="text-sm font-medium text-gray-800 dark:text-ucs-100">{{ activeLabel }}</p>
-        <button type="button" class="text-xs text-gray-500 hover:text-gray-800" @click="panelOpen = false">Close</button>
+        <button type="button" class="text-xs text-gray-500 hover:text-gray-800"
+          @click="panelOpen = false">Close</button>
       </div>
       <div class="max-h-96 overflow-auto">
         <table class="min-w-full text-sm">
           <thead class="sticky top-0 bg-gray-50 dark:bg-ucs-900 text-xs uppercase text-gray-500">
             <tr>
-              <th
-                v-for="col in columns"
-                :key="col.key"
-                class="px-3 py-2"
+              <th v-for="col in columns" :key="col.key" class="px-3 py-2"
                 :class="col.align === 'right' ? 'text-right' : 'text-left'">
                 {{ col.label }}
               </th>
@@ -59,18 +47,11 @@
           </thead>
           <tbody>
             <tr v-for="row in rows" :key="row.id" class="border-t border-gray-100 dark:border-ucs-800">
-              <td
-                v-for="col in columns"
-                :key="col.key"
-                class="px-3 py-2"
-                :class="cellClass(col)">
+              <td v-for="col in columns" :key="col.key" class="px-3 py-2" :class="cellClass(col)">
                 <template v-if="col.key === 'action'">
-                  <button
-                    v-if="canResendRow(row)"
-                    type="button"
+                  <button v-if="canResendRow(row)" type="button"
                     class="rounded-md bg-ucs-500 px-2 py-1 text-xs text-white hover:bg-ucs-600 disabled:opacity-50"
-                    :disabled="resendingId === row.id"
-                    @click="resendRow(row)">
+                    :disabled="resendingId === row.id" @click="resendRow(row)">
                     {{ resendingId === row.id ? '…' : 'Resend' }}
                   </button>
                   <span v-else class="text-xs text-gray-400">—</span>
@@ -82,13 +63,10 @@
         </table>
         <p v-if="!loading && !rows.length" class="p-4 text-sm text-gray-500">No rows in this category.</p>
       </div>
-      <div v-if="total > rows.length" class="flex justify-between items-center px-3 py-2 border-t text-xs text-gray-500">
+      <div v-if="total > rows.length"
+        class="flex justify-between items-center px-3 py-2 border-t text-xs text-gray-500">
         <span>Showing {{ rows.length }} of {{ total }}</span>
-        <button
-          v-if="rows.length < total"
-          type="button"
-          class="text-ucs-600 hover:underline"
-          :disabled="loading"
+        <button v-if="rows.length < total" type="button" class="text-ucs-600 hover:underline" :disabled="loading"
           @click="loadMore">
           Load more
         </button>

@@ -1,25 +1,19 @@
 <template>
-  <PageTitle
-    heading="Settings"
-    subtext="Council operations, activations, recovery, and maintenance — scoped by your permissions" />
+  <PageTitle heading="Settings" subtext="Council operations, activations, recovery, and maintenance" />
 
-  <div v-if="!auth.hasAnySettingsAccess" class="rounded-xl border border-gray-200 dark:border-ucs-800 p-6 bg-white dark:bg-ucs-900/40">
-    <p class="text-sm text-gray-600 dark:text-gray-300">You do not have access to any Settings tabs. Contact an administrator.</p>
+  <div v-if="!auth.hasAnySettingsAccess"
+    class="rounded-xl border border-gray-200 dark:border-ucs-800 p-6 bg-white dark:bg-ucs-900/40">
+    <p class="text-sm text-gray-600 dark:text-gray-300">You do not have access to any Settings tabs. Contact an
+      administrator.</p>
   </div>
 
   <template v-else>
     <nav class="mb-6 flex flex-wrap gap-2 border-b border-gray-200 dark:border-ucs-800 pb-2">
-      <button
-        v-for="tab in tabs"
-        :key="tab.id"
-        type="button"
-        class="rounded-t-lg border-b-2 px-4 py-2 text-sm font-medium transition-colors"
-        :class="
-          activeTab === tab.id
+      <button v-for="tab in tabs" :key="tab.id" type="button"
+        class="rounded-t-lg border-b-2 px-4 py-2 text-sm font-medium transition-colors" :class="activeTab === tab.id
             ? 'border-ucs-500 text-ucs-700 dark:text-ucs-100 bg-ucs-50/80 dark:bg-ucs-900/60'
             : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-ucs-600'
-        "
-        @click="activeTab = tab.id">
+          " @click="activeTab = tab.id">
         {{ tab.label }}
       </button>
     </nav>
