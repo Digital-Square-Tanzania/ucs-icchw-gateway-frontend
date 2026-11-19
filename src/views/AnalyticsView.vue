@@ -3,7 +3,7 @@
 
   <article class="rounded-xl border border-gray-200 dark:border-ucs-800 bg-white dark:bg-ucs-900/40 p-5 shadow-sm">
     <CouncilHierarchyHero v-if="councilLocked" :region="selectedRegion" :district="selectedDistrict"
-      :council="selectedCouncil"
+      :council="selectedCouncil" :stats="peerStats"
       subtitle="HRHIS register analytics, incoming volume, failures, and recoveries for your council." />
 
     <template v-else>
@@ -403,6 +403,9 @@ interface AnalyticsSummary {
   updated: number
   internalUpdateLogs: number
   recoveryRetries: number
+  peersSubmitted?: number
+  peersAccepted?: number
+  peersRejected?: number
 }
 
 interface AnalyticsData {
@@ -456,6 +459,18 @@ const duplicateScope = computed(() => {
 })
 
 const prefixHint = computed(() => data.value?.scope.councilPrefixes?.join(', ') || '')
+
+const peerStats = computed(() => {
+  const summary = data.value?.summary
+  if (!summary) return null
+  const accepted = summary.peersAccepted ?? 0
+  const rejected = summary.peersRejected ?? 0
+  return {
+    submitted: summary.peersSubmitted ?? accepted + rejected,
+    accepted,
+    rejected,
+  }
+})
 
 const summaryCards = computed(() => {
   const s = data.value?.summary

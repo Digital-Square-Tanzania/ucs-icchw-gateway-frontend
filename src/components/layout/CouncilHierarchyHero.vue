@@ -17,27 +17,38 @@
 
     <div
       v-if="hasScope"
-      class="mt-5 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-      <div class="flex flex-wrap items-baseline gap-x-3 gap-y-2">
-        <span class="text-sm font-medium text-gray-500 dark:text-gray-400">Region</span>
-        <span class="text-2xl sm:text-3xl font-bold tracking-tight text-gray-900 dark:text-white">
-          {{ region }}
-        </span>
+      class="mt-5 flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+      <div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+        <div class="flex flex-wrap items-baseline gap-x-3 gap-y-2">
+          <span class="text-sm font-medium text-gray-500 dark:text-gray-400">Region</span>
+          <span class="text-2xl sm:text-3xl font-bold tracking-tight text-gray-900 dark:text-white">
+            {{ region }}
+          </span>
+        </div>
+        <span class="hidden sm:inline text-3xl font-light text-ucs-400 select-none" aria-hidden="true">›</span>
+        <div class="flex flex-wrap items-baseline gap-x-3 gap-y-2">
+          <span class="text-sm font-medium text-gray-500 dark:text-gray-400">District</span>
+          <span class="text-2xl sm:text-3xl font-bold tracking-tight text-ucs-800 dark:text-ucs-100">
+            {{ district }}
+          </span>
+        </div>
+        <span class="hidden sm:inline text-3xl font-light text-ucs-400 select-none" aria-hidden="true">›</span>
+        <div class="flex flex-wrap items-baseline gap-x-3 gap-y-2">
+          <span class="text-sm font-medium text-gray-500 dark:text-gray-400">Council</span>
+          <span
+            class="text-2xl sm:text-3xl font-bold tracking-tight bg-gradient-to-r from-ucs-600 to-sky-600 bg-clip-text text-transparent dark:from-ucs-300 dark:to-sky-300">
+            {{ council }}
+          </span>
+        </div>
       </div>
-      <span class="hidden sm:inline text-3xl font-light text-ucs-400 select-none" aria-hidden="true">›</span>
-      <div class="flex flex-wrap items-baseline gap-x-3 gap-y-2">
-        <span class="text-sm font-medium text-gray-500 dark:text-gray-400">District</span>
-        <span class="text-2xl sm:text-3xl font-bold tracking-tight text-ucs-800 dark:text-ucs-100">
-          {{ district }}
-        </span>
-      </div>
-      <span class="hidden sm:inline text-3xl font-light text-ucs-400 select-none" aria-hidden="true">›</span>
-      <div class="flex flex-wrap items-baseline gap-x-3 gap-y-2">
-        <span class="text-sm font-medium text-gray-500 dark:text-gray-400">Council</span>
-        <span
-          class="text-2xl sm:text-3xl font-bold tracking-tight bg-gradient-to-r from-ucs-600 to-sky-600 bg-clip-text text-transparent dark:from-ucs-300 dark:to-sky-300">
-          {{ council }}
-        </span>
+
+      <div v-if="stats" class="flex flex-wrap gap-x-6 gap-y-3 lg:justify-end">
+        <div v-for="stat in statItems" :key="stat.label" class="flex flex-col">
+          <span class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ stat.label }}</span>
+          <span class="text-2xl sm:text-3xl font-bold tracking-tight" :class="stat.valueClass">
+            {{ stat.value }}
+          </span>
+        </div>
       </div>
     </div>
 
@@ -57,14 +68,41 @@ const props = withDefaults(
     district?: string
     council?: string
     subtitle?: string
+    stats?: {
+      submitted: number
+      accepted: number
+      rejected: number
+    } | null
   }>(),
   {
     region: '',
     district: '',
     council: '',
     subtitle: 'All metrics and actions on this page apply to this location only.',
+    stats: null,
   },
 )
 
 const hasScope = computed(() => Boolean(props.council?.trim()))
+
+const statItems = computed(() => {
+  if (!props.stats) return []
+  return [
+    {
+      label: 'Submitted peers',
+      value: props.stats.submitted,
+      valueClass: 'text-gray-900 dark:text-white',
+    },
+    {
+      label: 'Accepted',
+      value: props.stats.accepted,
+      valueClass: 'text-ucs-800 dark:text-ucs-100',
+    },
+    {
+      label: 'Rejected',
+      value: props.stats.rejected,
+      valueClass: 'bg-gradient-to-r from-ucs-600 to-sky-600 bg-clip-text text-transparent dark:from-ucs-300 dark:to-sky-300',
+    },
+  ]
+})
 </script>
