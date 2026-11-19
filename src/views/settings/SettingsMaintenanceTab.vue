@@ -15,14 +15,30 @@
           <p class="mt-2 text-xs text-gray-500">Last sync: {{ lastSynced[item.path] || 'Never' }}</p>
           <button
             type="button"
-            :disabled="syncStatus[item.path] === 'syncing'"
+            :disabled="isSyncing(item.path)"
             class="mt-4 rounded-lg bg-ucs-500 px-4 py-2 text-sm font-medium text-white hover:bg-ucs-600 disabled:opacity-60"
             @click="runDashboardSync(item.path)">
-            {{ syncStatus[item.path] === 'syncing' ? 'Syncing…' : item.actionLabel }}
+            {{ isSyncing(item.path) ? 'Syncing…' : item.actionLabel }}
           </button>
-          <p v-if="syncMessages[item.path]" class="mt-2 text-xs" :class="syncMessageClass(item.path)">
-            {{ syncMessages[item.path] }}
+          <p v-if="jobs[item.path]?.message" class="mt-2 text-xs" :class="syncMessageClass(item.path)">
+            {{ jobs[item.path].message }}
           </p>
+          <div
+            v-if="jobs[item.path] && (isSyncing(item.path) || jobs[item.path].logs.length)"
+            class="mt-3 rounded-lg border border-ucs-200 dark:border-ucs-800 bg-ucs-50/80 dark:bg-ucs-950/40 p-3">
+            <div class="flex items-center justify-between gap-2 text-xs text-gray-700 dark:text-gray-300">
+              <span>{{ isSyncing(item.path) ? 'In progress' : jobs[item.path].status === 'synced' ? 'Finished' : 'Stopped' }}</span>
+              <span>{{ Math.round(jobs[item.path].percent) }}%</span>
+            </div>
+            <div class="mt-2 h-2 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-ucs-800">
+              <div
+                class="h-full rounded-full bg-ucs-500 transition-all duration-300"
+                :style="{ width: `${Math.min(100, Math.max(0, jobs[item.path].percent))}%` }" />
+            </div>
+            <pre
+              :ref="(el) => setLogBox(item.path, el)"
+              class="mt-2 max-h-40 overflow-auto whitespace-pre-wrap break-words font-mono text-[0.7rem] leading-relaxed text-gray-700 dark:text-gray-300">{{ logText(item.path) }}</pre>
+          </div>
         </article>
       </div>
     </div>
@@ -72,7 +88,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, reactive, ref, watch } from 'vue'
+import { computed, nextTick, reactive, ref, watch } from 'vue'
 import { useToast } from 'primevue/usetoast'
 import { storeToRefs } from 'pinia'
 import TeamMemberSyncPanel from '@/components/settings/TeamMemberSyncPanel.vue'
@@ -82,7 +98,8 @@ import { useSyncStore } from '@/stores/sync'
 const auth = useAuthStore()
 const syncStore = useSyncStore()
 const toast = useToast()
-const { syncStatus, lastSynced } = storeToRefs(syncStore)
+const { lastSynced, jobs } = storeToRefs(syncStore)
+const logBoxes = ref<Record<string, HTMLElement | null>>({})
 
 const syncItems = [
   {
@@ -99,7 +116,6 @@ const syncItems = [
   },
 ]
 
-const syncMessages = reactive<Record<string, string>>({})
 const devStatus = reactive<Record<string, 'idle' | 'running' | 'success' | 'error'>>({})
 const devMessages = reactive<Record<string, string>>({})
 const orphanStatus = ref<'idle' | 'running' | 'success' | 'error'>('idle')
@@ -114,18 +130,35 @@ const orphanMessageClass = computed(() =>
   orphanStatus.value === 'success' ? 'text-green-700' : orphanStatus.value === 'error' ? 'text-red-700' : 'text-gray-600',
 )
 
+function isSyncing(path: string) {
+  return jobs.value[path]?.status === 'syncing'
+}
+
 function syncMessageClass(path: string) {
-  return syncStatus.value[path] === 'synced' ? 'text-green-700' : 'text-gray-600'
+  const status = jobs.value[path]?.status
+  if (status === 'synced') return 'text-green-700 dark:text-green-300'
+  if (status === 'error') return 'text-red-700 dark:text-red-300'
+  return 'text-gray-600 dark:text-gray-300'
+}
+
+function logText(path: string) {
+  return (jobs.value[path]?.logs ?? []).map((line) => line.message).join('\n')
+}
+
+function setLogBox(path: string, el: unknown) {
+  logBoxes.value[path] = el instanceof HTMLElement ? el : null
 }
 
 async function runDashboardSync(path: 'dhis2' | 'facilities') {
-  syncMessages[path] = ''
   try {
+    syncStore.initWebSocket()
     await syncStore.startSync(path)
-    syncMessages[path] = 'Sync started…'
+    const job = jobs.value[path]
+    if (job?.status === 'synced') {
+      toast.add({ severity: 'success', summary: 'Sync complete', detail: job.message, life: 4000 })
+    }
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e)
-    syncMessages[path] = message
     toast.add({ severity: 'error', summary: 'Sync failed', detail: message, life: 5000 })
   }
 }
@@ -159,12 +192,13 @@ async function runDevTool(tool: (typeof devTools)[0]) {
 }
 
 watch(
-  () => ({ ...syncStatus.value }),
-  (status) => {
+  () => syncItems.map((item) => jobs.value[item.path]?.logs.length ?? 0).join(','),
+  async () => {
+    await nextTick()
     for (const item of syncItems) {
-      if (status[item.path] === 'synced') syncMessages[item.path] = 'Sync completed.'
+      const box = logBoxes.value[item.path]
+      if (box) box.scrollTop = box.scrollHeight
     }
   },
-  { deep: true },
 )
 </script>

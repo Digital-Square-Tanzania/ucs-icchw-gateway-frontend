@@ -100,6 +100,7 @@ import DonutChart from '@/components/charts/DonutChart.vue'
 import LastUsersTable from '@/components/tables/LastusersTable.vue'
 import PageTitle from '@/components/layout/PageTitle.vue'
 import { onMounted, onUnmounted, computed, ref } from 'vue'
+import { storeToRefs } from 'pinia'
 import { useRouter } from 'vue-router'
 import ApiClient from '@/utilities/ApiClient'
 
@@ -109,7 +110,8 @@ import BoxInfograms from '@/components/charts/BoxInfograms.vue'
 import { useSyncStore } from '@/stores/sync'
 
 const syncStore = useSyncStore()
-const { syncStatus, lastSynced, startSync } = syncStore
+const { syncStatus, lastSynced } = storeToRefs(syncStore)
+const startSync = (path: string) => syncStore.startSync(path)
 
 let stopSyncListener: (() => void) | undefined
 
