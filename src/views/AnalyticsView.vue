@@ -96,14 +96,52 @@
     </section>
 
     <section class="mt-8">
-      <div class="flex flex-wrap gap-2 mb-4">
-        <button v-for="tab in tabs" :key="tab.id" type="button"
-          class="rounded-lg px-3 py-1.5 text-sm font-medium transition-colors" :class="activeTab === tab.id
-            ? 'bg-ucs-500 text-white'
-            : 'border border-gray-300 dark:border-ucs-700 text-gray-700 dark:text-ucs-200 hover:bg-gray-50 dark:hover:bg-ucs-950'
-            " @click="activeTab = tab.id">
-          {{ tab.label }} ({{ tab.count }})
-        </button>
+      <div class="mb-4 flex flex-wrap items-end justify-between gap-3">
+        <div class="flex flex-wrap gap-2">
+          <button v-for="tab in tabs" :key="tab.id" type="button"
+            class="rounded-lg px-3 py-1.5 text-sm font-medium transition-colors" :class="activeTab === tab.id
+              ? 'bg-ucs-500 text-white'
+              : 'border border-gray-300 dark:border-ucs-700 text-gray-700 dark:text-ucs-200 hover:bg-gray-50 dark:hover:bg-ucs-950'
+              " @click="activeTab = tab.id">
+            {{ tab.label }} ({{ tab.count }})
+          </button>
+        </div>
+
+        <div ref="facilityFilterRoot" class="relative ml-auto min-w-[16rem]">
+          <p class="mb-1 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Filter</p>
+          <button type="button"
+            class="flex w-full items-center justify-between gap-2 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-left text-sm text-gray-800 shadow-sm hover:border-ucs-400 dark:border-ucs-700 dark:bg-ucs-900 dark:text-ucs-100"
+            :aria-expanded="facilityFilterOpen" @click="facilityFilterOpen = !facilityFilterOpen">
+            <span class="truncate">{{ facilityFilterLabel }}</span>
+            <span class="text-xs text-gray-400" aria-hidden="true">▾</span>
+          </button>
+          <div v-if="facilityFilterOpen"
+            class="absolute right-0 z-20 mt-1 max-h-72 w-full overflow-auto rounded-lg border border-gray-200 bg-white py-1 shadow-lg dark:border-ucs-700 dark:bg-ucs-900">
+            <button type="button"
+              class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-ucs-50 dark:hover:bg-ucs-950"
+              @click="selectAllFacilities">
+              <span class="flex h-4 w-4 shrink-0 items-center justify-center rounded border text-[0.7rem]"
+                :class="allFacilitiesSelected
+                  ? 'border-ucs-500 bg-ucs-500 text-white'
+                  : 'border-gray-300 bg-white dark:border-ucs-600 dark:bg-ucs-950'">
+                <span v-if="allFacilitiesSelected">✓</span>
+              </span>
+              <span>All</span>
+            </button>
+            <button v-for="name in facilityOptions" :key="name" type="button"
+              class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-ucs-50 dark:hover:bg-ucs-950"
+              @click="toggleFacility(name)">
+              <span class="flex h-4 w-4 shrink-0 items-center justify-center rounded border text-[0.7rem]"
+                :class="selectedFacilities.includes(name)
+                  ? 'border-ucs-500 bg-ucs-500 text-white'
+                  : 'border-gray-300 bg-white dark:border-ucs-600 dark:bg-ucs-950'">
+                <span v-if="selectedFacilities.includes(name)">✓</span>
+              </span>
+              <span class="truncate">{{ name }}</span>
+            </button>
+            <p v-if="!facilityOptions.length" class="px-3 py-2 text-xs text-gray-500">No facilities in this list.</p>
+          </div>
+        </div>
       </div>
 
       <div
@@ -112,27 +150,29 @@
         <table v-if="activeTab === 'accepted'" class="w-full table-fixed text-sm">
           <thead class="bg-gray-50 dark:bg-ucs-950/60 text-left text-xs uppercase text-gray-500">
             <tr>
-              <th class="px-3 py-2 w-[14%]">When</th>
-              <th class="px-3 py-2 w-[14%]">NIN</th>
-              <th class="px-3 py-2 w-[16%]">Name</th>
-              <th class="px-3 py-2 w-[8%]">Kind</th>
-              <th class="px-3 py-2 w-[16%]">Location</th>
-              <th class="px-3 py-2 w-[12%]">HFR</th>
-              <th class="px-3 py-2 w-[8%]">HTTP</th>
+              <th class="px-3 py-2 w-[12%]">When</th>
+              <th class="px-3 py-2 w-[12%]">NIN</th>
+              <th class="px-3 py-2 w-[14%]">Name</th>
+              <th class="px-3 py-2 w-[7%]">Kind</th>
+              <th class="px-3 py-2 w-[12%]">Location</th>
+              <th class="px-3 py-2 w-[16%]">Facility</th>
+              <th class="px-3 py-2 w-[10%]">HFR</th>
+              <th class="px-3 py-2 w-[7%]">HTTP</th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="row in data.accepted" :key="row.logId" class="border-t border-gray-100 dark:border-ucs-800">
+            <tr v-for="row in filteredAccepted" :key="row.logId" class="border-t border-gray-100 dark:border-ucs-800">
               <td class="px-3 py-2 whitespace-nowrap">{{ formatDate(row.createdAt) }}</td>
               <td class="px-3 py-2 font-mono text-xs">{{ row.nin || '—' }}</td>
               <td class="px-3 py-2">{{ row.name || '—' }}</td>
               <td class="px-3 py-2 capitalize">{{ row.kind }}</td>
               <td class="px-3 py-2 font-mono text-xs">{{ row.locationCode || '—' }}</td>
+              <td class="px-3 py-2">{{ row.facilityName || '—' }}</td>
               <td class="px-3 py-2">{{ row.hfrCode || '—' }}</td>
               <td class="px-3 py-2">{{ row.httpStatus ?? '—' }}</td>
             </tr>
-            <tr v-if="!data.accepted.length">
-              <td colspan="7" class="px-3 py-6 text-center text-gray-500">No accepted records in this period.</td>
+            <tr v-if="!filteredAccepted.length">
+              <td colspan="8" class="px-3 py-6 text-center text-gray-500">{{ emptyTableMessage('accepted') }}</td>
             </tr>
           </tbody>
         </table>
@@ -150,7 +190,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="row in data.rejected" :key="row.logId" class="border-t border-gray-100 dark:border-ucs-800">
+            <tr v-for="row in filteredRejected" :key="row.logId" class="border-t border-gray-100 dark:border-ucs-800">
               <td class="px-3 py-2 whitespace-nowrap">{{ formatDate(row.createdAt) }}</td>
               <td class="px-3 py-2 font-mono text-xs break-all">{{ row.nin || '—' }}</td>
               <td class="px-3 py-2">{{ row.name || '—' }}</td>
@@ -158,8 +198,8 @@
               <td class="px-3 py-2">{{ row.httpStatus ?? '—' }}</td>
               <td class="px-3 py-2 text-red-700 dark:text-red-300 break-words">{{ row.errorMessage }}</td>
             </tr>
-            <tr v-if="!data.rejected.length">
-              <td colspan="6" class="px-3 py-6 text-center text-gray-500">No open rejections in this period.</td>
+            <tr v-if="!filteredRejected.length">
+              <td colspan="6" class="px-3 py-6 text-center text-gray-500">{{ emptyTableMessage('rejected') }}</td>
             </tr>
           </tbody>
         </table>
@@ -178,7 +218,7 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="row in data.updates" :key="row.logId"
+              <tr v-for="row in filteredUpdates" :key="row.logId"
                 class="border-t border-gray-100 dark:border-ucs-800 align-top">
                 <td class="px-3 py-2 whitespace-nowrap">{{ formatDate(row.createdAt) }}</td>
                 <td class="px-3 py-2 font-mono text-xs break-all">{{ row.nin || '—' }}</td>
@@ -188,12 +228,12 @@
                   formatFieldChanges(row.fieldChanges) }}</td>
                 <td class="px-3 py-2 text-xs">{{ row.action }}</td>
               </tr>
-              <tr v-if="!data.updates.length">
-                <td colspan="6" class="px-3 py-6 text-center text-gray-500">No internal update logs in this period.</td>
+              <tr v-if="!filteredUpdates.length">
+                <td colspan="6" class="px-3 py-6 text-center text-gray-500">{{ emptyTableMessage('updates') }}</td>
               </tr>
             </tbody>
           </table>
-          <p v-if="data.updates.length"
+          <p v-if="filteredUpdates.length"
             class="px-3 py-2 text-xs text-gray-500 dark:text-gray-400 border-t border-gray-100 dark:border-ucs-800">
             Updates from before this enhancement may show new values only (old values were not stored historically).
           </p>
@@ -213,7 +253,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="row in data.duplicates" :key="row.nin" class="border-t border-gray-100 dark:border-ucs-800">
+            <tr v-for="row in filteredDuplicates" :key="row.nin" class="border-t border-gray-100 dark:border-ucs-800">
               <td class="px-3 py-2 font-mono text-xs break-all">{{ row.nin }}</td>
               <td class="px-3 py-2">{{ row.submissionCount }}</td>
               <td class="px-3 py-2">
@@ -239,9 +279,8 @@
                 </button>
               </td>
             </tr>
-            <tr v-if="!data.duplicates.length">
-              <td colspan="7" class="px-3 py-6 text-center text-gray-500">No duplicate NIN submissions in this period.
-              </td>
+            <tr v-if="!filteredDuplicates.length">
+              <td colspan="7" class="px-3 py-6 text-center text-gray-500">{{ emptyTableMessage('duplicates') }}</td>
             </tr>
           </tbody>
         </table>
@@ -260,7 +299,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onMounted, ref } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
 import PageTitle from '@/components/layout/PageTitle.vue'
 import CouncilHierarchyHero from '@/components/layout/CouncilHierarchyHero.vue'
 import HrhisRegistrationsSection from '@/components/analytics/HrhisRegistrationsSection.vue'
@@ -302,6 +341,7 @@ interface AcceptedRow {
   nin?: string | null
   name?: string | null
   locationCode?: string | null
+  facilityName?: string | null
   hfrCode?: string | null
   httpStatus?: number | null
   kind?: string
@@ -315,6 +355,7 @@ interface RejectedRow {
   nin?: string | null
   name?: string | null
   locationCode?: string | null
+  facilityName?: string | null
   hfrCode?: string | null
   httpStatus?: number | null
   errorMessage: string
@@ -328,6 +369,7 @@ interface UpdateRow {
   nin?: string | null
   name?: string | null
   locationCode?: string | null
+  facilityName?: string | null
   action?: string
   updateNumber: number
   totalUpdatesForNin: number
@@ -342,6 +384,8 @@ interface DuplicateRow {
   submissionCount: number
   openCount?: number
   resolvedCount?: number
+  facilityName?: string | null
+  facilityNames?: string[]
   firstAt?: string | null
   lastAt?: string | null
 }
@@ -395,6 +439,9 @@ const hierarchyError = ref('')
 const error = ref('')
 const data = ref<AnalyticsData | null>(null)
 const activeTab = ref<'accepted' | 'rejected' | 'updates' | 'duplicates'>('accepted')
+const selectedFacilities = ref<string[]>([])
+const facilityFilterOpen = ref(false)
+const facilityFilterRoot = ref<HTMLElement | null>(null)
 const duplicateDialogOpen = ref(false)
 const duplicateNin = ref<string | null>(null)
 
@@ -431,6 +478,71 @@ const tabs = computed(() => [
   { id: 'updates' as const, label: 'Updates', count: data.value?.updates.length ?? 0 },
   { id: 'duplicates' as const, label: 'Duplicates', count: data.value?.duplicates.length ?? 0 },
 ])
+
+function facilityNamesOf(row: { facilityName?: string | null; facilityNames?: string[] }) {
+  if (row.facilityNames?.length) return row.facilityNames.filter(Boolean)
+  return row.facilityName ? [row.facilityName] : []
+}
+
+function rowMatchesFacility(row: { facilityName?: string | null; facilityNames?: string[] }) {
+  if (!selectedFacilities.value.length) return true
+  return facilityNamesOf(row).some((name) => selectedFacilities.value.includes(name))
+}
+
+const activeRows = computed(() => {
+  if (!data.value) return []
+  if (activeTab.value === 'rejected') return data.value.rejected
+  if (activeTab.value === 'updates') return data.value.updates
+  if (activeTab.value === 'duplicates') return data.value.duplicates
+  return data.value.accepted
+})
+
+const facilityOptions = computed(() => {
+  const names = new Set<string>()
+  for (const row of activeRows.value) {
+    for (const name of facilityNamesOf(row)) names.add(name)
+  }
+  return [...names].sort((a, b) => a.localeCompare(b))
+})
+
+const allFacilitiesSelected = computed(() => selectedFacilities.value.length === 0)
+
+const facilityFilterLabel = computed(() => {
+  const selected = selectedFacilities.value
+  if (!selected.length) return 'All'
+  if (selected.length === 1) return selected[0]
+  return `${selected.length} facilities`
+})
+
+const filteredAccepted = computed(() => (data.value?.accepted ?? []).filter(rowMatchesFacility))
+const filteredRejected = computed(() => (data.value?.rejected ?? []).filter(rowMatchesFacility))
+const filteredUpdates = computed(() => (data.value?.updates ?? []).filter(rowMatchesFacility))
+const filteredDuplicates = computed(() => (data.value?.duplicates ?? []).filter(rowMatchesFacility))
+
+function selectAllFacilities() {
+  selectedFacilities.value = []
+}
+
+function toggleFacility(name: string) {
+  const current = selectedFacilities.value
+  selectedFacilities.value = current.includes(name)
+    ? current.filter((item) => item !== name)
+    : [...current, name]
+}
+
+function emptyTableMessage(tab: 'accepted' | 'rejected' | 'updates' | 'duplicates') {
+  if (selectedFacilities.value.length) return 'No records for the selected facilities.'
+  if (tab === 'accepted') return 'No accepted records in this period.'
+  if (tab === 'rejected') return 'No open rejections in this period.'
+  if (tab === 'updates') return 'No internal update logs in this period.'
+  return 'No duplicate NIN submissions in this period.'
+}
+
+function onDocumentPointerDown(event: MouseEvent) {
+  const root = facilityFilterRoot.value
+  if (!root || root.contains(event.target as Node)) return
+  facilityFilterOpen.value = false
+}
 
 function eachRegion(fn: (region: Region) => void) {
   for (const country of Object.values(hierarchy.value)) {
@@ -553,6 +665,8 @@ async function runAnalytics(preserveTab = false) {
       `/gateway/admin/hrhis-council-analytics?${params.toString()}`,
     )
     data.value = response.data?.data ?? null
+    selectedFacilities.value = []
+    facilityFilterOpen.value = false
     activeTab.value = preserveTab && tab ? tab : 'accepted'
   } catch (err: unknown) {
     data.value = previous
@@ -586,11 +700,16 @@ function applyCoordinatorCouncil() {
 }
 
 onMounted(async () => {
+  document.addEventListener('pointerdown', onDocumentPointerDown)
   if (councilLocked.value) {
     applyCoordinatorCouncil()
     await runAnalytics()
     return
   }
   await loadHierarchy()
+})
+
+onUnmounted(() => {
+  document.removeEventListener('pointerdown', onDocumentPointerDown)
 })
 </script>
