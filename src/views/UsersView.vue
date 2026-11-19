@@ -8,7 +8,7 @@
           class="inline-flex flex-wrap gap-1 rounded-xl bg-gray-100 dark:bg-gray-900/80 p-1"
           aria-label="User categories">
           <button
-            v-for="system in systems"
+            v-for="system in visibleSystems"
             :key="system.code"
             type="button"
             :class="tabButtonClass(system.code)"
@@ -147,7 +147,7 @@ import Button from "primevue/button";
 import PageTitle from "@/components/layout/PageTitle.vue";
 import ApiClient from "@/utilities/ApiClient";
 import { useAuthStore } from "@/stores/auth";
-import { Role } from "@/constants/roles";
+import { canAccessUserTab } from "@/utils/userTabPermissions";
 import { useToast } from "primevue";
 import UserDetailsDialog from "@/components/dialogs/UserDetailsDialog.vue";
 import {
@@ -218,6 +218,10 @@ const systems = [
   { name: "Manager", code: "manager" as SystemCode },
 ];
 
+const visibleSystems = computed(() =>
+  systems.filter((system) => canAccessUserTab(authStore.permissions, system.code, "view")),
+);
+
 const showDialog = ref(false);
 const selectedUser = ref<string | null>(null);
 
@@ -234,12 +238,12 @@ const managedRoleNotice = computed(() => {
   return "iCCHW accounts are registered from HRHIS. This list is view only.";
 });
 
-const canAddUser = computed(
-  () =>
-    authStore.userRole !== Role.MOH_USER &&
-    (currentSystem.value === "manager" ||
-      (currentSystem.value === "openmrs" && !managedRoleNotice.value)),
-);
+const canAddUser = computed(() => {
+  const system = currentSystem.value;
+  if (system === "dhis2") return false;
+  if (system === "openmrs" && managedRoleNotice.value) return false;
+  return canAccessUserTab(authStore.permissions, system, "create");
+});
 
 function tabButtonClass(code: SystemCode) {
   const active = currentSystem.value === code;
@@ -459,11 +463,9 @@ function resolveQueryValue(value: unknown): string | null {
 
 function applyRoutePreferences() {
   const systemFromQuery = resolveQueryValue(route.query.system);
-  if (systemFromQuery && systems.some((s) => s.code === systemFromQuery)) {
-    currentSystem.value = systemFromQuery as SystemCode;
-  } else {
-    currentSystem.value = "openmrs";
-  }
+  const allowed = visibleSystems.value;
+  const requested = allowed.find((system) => system.code === systemFromQuery);
+  currentSystem.value = requested?.code ?? allowed[0]?.code ?? "openmrs";
   const pageQuery = resolveQueryValue(route.query.page);
   shouldJumpToLastPage.value = pageQuery === "last";
 }
@@ -530,6 +532,7 @@ function roleColor(role: string | null) {
 
 onMounted(async () => {
   applyRoutePreferences();
+  if (!visibleSystems.value.length) return;
   if (currentSystem.value === "openmrs") {
     await fetchOpenMrsRoles();
   }

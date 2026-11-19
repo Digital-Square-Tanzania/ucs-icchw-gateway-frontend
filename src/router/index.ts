@@ -13,7 +13,8 @@ import AddManagerUserView from '@/views/AddManagerUserView.vue'
 import AddDhis2UserView from '@/views/AddDhis2UserView.vue'
 import SettingsView from '@/views/SettingsView.vue'
 import AnalyticsView from '@/views/AnalyticsView.vue'
-import { ANALYTICS_ROLES, Role, type RoleName } from '@/constants/roles'
+import { ANALYTICS_ROLES, type RoleName } from '@/constants/roles'
+import { canAccessUserTab, type UserSystem } from '@/utils/userTabPermissions'
 
 const routes = [
   {
@@ -112,9 +113,12 @@ router.beforeEach(async (to, from, next) => {
       next(auth.homePath)
       return
     }
-    if (to.path.startsWith('/adduser') && auth.userRole === Role.MOH_USER) {
-      next('/users')
-      return
+    if (to.path.startsWith('/adduser')) {
+      const system = to.path.split('/')[2] as UserSystem
+      if (system && !canAccessUserTab(auth.permissions, system, 'create')) {
+        next('/users')
+        return
+      }
     }
   }
 
