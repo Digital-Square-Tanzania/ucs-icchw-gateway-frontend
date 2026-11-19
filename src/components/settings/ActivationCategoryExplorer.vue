@@ -19,14 +19,28 @@
       </button>
     </div>
 
-    <div class="flex flex-wrap gap-2 mb-4">
-      <button v-for="cat in categories" :key="cat.id" type="button"
-        class="rounded-full px-3 py-1.5 text-xs font-medium border transition-colors" :class="activeCategory === cat.id
-            ? 'border-ucs-500 bg-ucs-500 text-white'
-            : 'border-gray-300 dark:border-ucs-700 text-gray-700 dark:text-ucs-200 hover:border-ucs-400'
-          " @click="openCategory(cat.id)">
-        {{ cat.label }}
-      </button>
+    <div class="mb-4 flex flex-wrap items-center justify-between gap-2">
+      <div class="flex flex-wrap gap-2">
+        <button v-for="cat in categories" :key="cat.id" type="button"
+          class="rounded-full px-3 py-1.5 text-xs font-medium border transition-colors" :class="activeCategory === cat.id
+              ? 'border-ucs-500 bg-ucs-500 text-white'
+              : 'border-gray-300 dark:border-ucs-700 text-gray-700 dark:text-ucs-200 hover:border-ucs-400'
+            " @click="openCategory(cat.id)">
+          {{ cat.label }}
+        </button>
+      </div>
+      <div v-if="showSelection" class="ml-auto flex flex-wrap items-center gap-2">
+        <button type="button"
+          class="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:border-ucs-400 dark:border-ucs-700 dark:text-ucs-200"
+          :disabled="!resendableRows.length || sendingChecked" @click="toggleAll">
+          {{ allChecked ? 'Uncheck all' : 'Check all' }}
+        </button>
+        <button type="button"
+          class="rounded-lg bg-ucs-500 px-3 py-1.5 text-xs font-medium text-white hover:bg-ucs-600 disabled:cursor-not-allowed disabled:opacity-50"
+          :disabled="!selectedIds.length || sendingChecked" @click="resendChecked">
+          {{ sendingChecked ? 'Sending…' : `Send checked${selectedIds.length ? ` (${selectedIds.length})` : ''}` }}
+        </button>
+      </div>
     </div>
 
     <div v-if="panelOpen" class="rounded-lg border border-ucs-200 dark:border-ucs-700 overflow-hidden">
@@ -39,6 +53,16 @@
         <table class="min-w-full text-sm">
           <thead class="sticky top-0 bg-gray-50 dark:bg-ucs-900 text-xs uppercase text-gray-500">
             <tr>
+              <th v-if="showSelection" class="w-10 px-3 py-2 text-left">
+                <button type="button" class="flex h-4 w-4 items-center justify-center rounded border text-[0.7rem]"
+                  :class="allChecked
+                    ? 'border-ucs-500 bg-ucs-500 text-white'
+                    : 'border-gray-300 bg-white dark:border-ucs-600 dark:bg-ucs-950'"
+                  :disabled="!resendableRows.length || sendingChecked" :aria-label="allChecked ? 'Uncheck all' : 'Check all'"
+                  @click="toggleAll">
+                  <span v-if="allChecked">✓</span>
+                </button>
+              </th>
               <th v-for="col in columns" :key="col.key" class="px-3 py-2"
                 :class="col.align === 'right' ? 'text-right' : 'text-left'">
                 {{ col.label }}
@@ -47,6 +71,17 @@
           </thead>
           <tbody>
             <tr v-for="row in rows" :key="row.id" class="border-t border-gray-100 dark:border-ucs-800">
+              <td v-if="showSelection" class="px-3 py-2">
+                <button v-if="canResendRow(row)" type="button"
+                  class="flex h-4 w-4 items-center justify-center rounded border text-[0.7rem]"
+                  :class="selectedIds.includes(row.id)
+                    ? 'border-ucs-500 bg-ucs-500 text-white'
+                    : 'border-gray-300 bg-white dark:border-ucs-600 dark:bg-ucs-950'"
+                  :aria-label="`Select ${row.fullName || row.email || 'activation'}`" :disabled="sendingChecked"
+                  @click="toggleRow(row.id)">
+                  <span v-if="selectedIds.includes(row.id)">✓</span>
+                </button>
+              </td>
               <td v-for="col in columns" :key="col.key" class="px-3 py-2" :class="cellClass(col)">
                 <template v-if="col.key === 'action'">
                   <button v-if="canResendRow(row)" type="button"
@@ -172,6 +207,8 @@ const total = ref(0)
 const page = ref(1)
 const loading = ref(false)
 const resendingId = ref<number | null>(null)
+const selectedIds = ref<number[]>([])
+const sendingChecked = ref(false)
 let fetchSerial = 0
 
 const activeLabel = computed(
@@ -179,6 +216,18 @@ const activeLabel = computed(
 )
 
 const columns = computed(() => columnsByCategory[activeCategory.value])
+
+const showSelection = computed(
+  () =>
+    (activeCategory.value === 'open' || activeCategory.value === 'expired') &&
+    auth.hasPermission('activations:resend'),
+)
+
+const resendableRows = computed(() => rows.value.filter((row) => canResendRow(row)))
+
+const allChecked = computed(
+  () => resendableRows.value.length > 0 && resendableRows.value.every((row) => selectedIds.value.includes(row.id)),
+)
 
 function formatDate(value: string | null | undefined) {
   if (!value) return '—'
@@ -257,6 +306,7 @@ async function fetchPage(append = false) {
     const data = res.data?.data
     const newRows = data?.rows ?? []
     rows.value = append ? [...rows.value, ...newRows] : newRows
+    if (!append) selectedIds.value = []
     total.value = data?.total ?? newRows.length
   } catch (error) {
     if (serial !== fetchSerial) return
@@ -316,6 +366,69 @@ watch(
 onMounted(() => {
   if (props.querySuffix || props.councilLocked) loadOpenCategory()
 })
+
+function toggleRow(id: number) {
+  selectedIds.value = selectedIds.value.includes(id)
+    ? selectedIds.value.filter((item) => item !== id)
+    : [...selectedIds.value, id]
+}
+
+function toggleAll() {
+  if (allChecked.value) {
+    const visible = new Set(resendableRows.value.map((row) => row.id))
+    selectedIds.value = selectedIds.value.filter((id) => !visible.has(id))
+    return
+  }
+  const next = new Set(selectedIds.value)
+  for (const row of resendableRows.value) next.add(row.id)
+  selectedIds.value = [...next]
+}
+
+async function sendRows(targets: ActivationRow[], confirmOpen: boolean) {
+  let success = 0
+  let failed = 0
+  for (const row of targets) {
+    try {
+      await auth.apiClient.post(`/user/admin/activation-resend/${row.id}`, { confirmOpen })
+      success += 1
+    } catch {
+      failed += 1
+    }
+  }
+  toast.add({
+    severity: failed > 0 ? 'warn' : 'success',
+    summary: 'Activation resend',
+    detail: `Sent ${success}${failed ? `, failed ${failed}` : ''}.`,
+    life: 4000,
+  })
+  selectedIds.value = []
+  await fetchPage(false)
+  emit('activationChanged')
+}
+
+function resendChecked() {
+  const targets = rows.value.filter((row) => selectedIds.value.includes(row.id) && canResendRow(row))
+  if (!targets.length || sendingChecked.value) return
+  const needsOpenConfirm = targets.some((row) => new Date(row.expiryDate) >= new Date())
+  const run = async () => {
+    sendingChecked.value = true
+    try {
+      await sendRows(targets, needsOpenConfirm)
+    } finally {
+      sendingChecked.value = false
+    }
+  }
+  if (needsOpenConfirm) {
+    confirm.require({
+      message: `${targets.length} selected activation${targets.length === 1 ? '' : 's'} include a slug that is still valid. Resending may confuse the CHW. Continue?`,
+      header: 'Confirm open-slug resend',
+      icon: 'pi pi-exclamation-triangle',
+      accept: () => void run(),
+    })
+    return
+  }
+  void run()
+}
 
 function resendRow(row: ActivationRow) {
   const open = new Date(row.expiryDate) >= new Date()
