@@ -42,13 +42,18 @@
         </div>
       </div>
 
-      <div v-if="stats" class="flex flex-wrap gap-x-6 gap-y-3 lg:justify-end">
-        <div v-for="stat in statItems" :key="stat.label" class="flex flex-col">
-          <span class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ stat.label }}</span>
-          <span class="text-2xl sm:text-3xl font-bold tracking-tight" :class="stat.valueClass">
-            {{ stat.value }}
-          </span>
+      <div v-if="stats" class="flex flex-col gap-2 lg:items-end">
+        <div class="flex flex-wrap gap-x-6 gap-y-3 lg:justify-end">
+          <div v-for="stat in statItems" :key="stat.label" class="flex flex-col">
+            <span class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ stat.label }}</span>
+            <span class="text-2xl sm:text-3xl font-bold tracking-tight" :class="stat.valueClass">
+              {{ stat.value }}
+            </span>
+          </div>
         </div>
+        <p class="max-w-xs text-[0.7rem] leading-snug text-gray-500 dark:text-gray-400 lg:text-right">
+          One count per NIN. Failed is a peer whose latest registration did not succeed.
+        </p>
       </div>
     </div>
 
@@ -99,7 +104,7 @@ const statItems = computed(() => {
       valueClass: 'text-ucs-800 dark:text-ucs-100',
     },
     {
-      label: 'Rejected',
+      label: 'Failed',
       value: props.stats.rejected,
       valueClass: 'bg-gradient-to-r from-ucs-600 to-sky-600 bg-clip-text text-transparent dark:from-ucs-300 dark:to-sky-300',
     },
