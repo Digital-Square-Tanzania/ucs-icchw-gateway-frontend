@@ -13,7 +13,7 @@ import AddManagerUserView from '@/views/AddManagerUserView.vue'
 import AddDhis2UserView from '@/views/AddDhis2UserView.vue'
 import SettingsView from '@/views/SettingsView.vue'
 import AnalyticsView from '@/views/AnalyticsView.vue'
-import { ANALYTICS_ROLES, type RoleName } from '@/constants/roles'
+import { ANALYTICS_ROLES, Role, type RoleName } from '@/constants/roles'
 
 const routes = [
   {
@@ -110,6 +110,10 @@ router.beforeEach(async (to, from, next) => {
     if (!auth.permissions.length) await auth.fetchProfile()
     if (!auth.canAccessNav('/users')) {
       next(auth.homePath)
+      return
+    }
+    if (to.path.startsWith('/adduser') && auth.userRole === Role.MOH_USER) {
+      next('/users')
       return
     }
   }

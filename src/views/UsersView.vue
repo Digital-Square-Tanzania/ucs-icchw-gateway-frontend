@@ -147,6 +147,7 @@ import Button from "primevue/button";
 import PageTitle from "@/components/layout/PageTitle.vue";
 import ApiClient from "@/utilities/ApiClient";
 import { useAuthStore } from "@/stores/auth";
+import { Role } from "@/constants/roles";
 import { useToast } from "primevue";
 import UserDetailsDialog from "@/components/dialogs/UserDetailsDialog.vue";
 import {
@@ -235,8 +236,9 @@ const managedRoleNotice = computed(() => {
 
 const canAddUser = computed(
   () =>
-    currentSystem.value === "manager" ||
-    (currentSystem.value === "openmrs" && !managedRoleNotice.value),
+    authStore.userRole !== Role.MOH_USER &&
+    (currentSystem.value === "manager" ||
+      (currentSystem.value === "openmrs" && !managedRoleNotice.value)),
 );
 
 function tabButtonClass(code: SystemCode) {
@@ -517,6 +519,8 @@ function roleColor(role: string | null) {
       return "bg-red-200 dark:bg-red-900";
     case "MOH_ADMIN":
       return "bg-orange-200 dark:bg-orange-900";
+    case "MOH_USER":
+      return "bg-sky-200 dark:bg-sky-900";
     case "EXTERNAL_SYSTEM":
       return "bg-slate-200 dark:bg-slate-800";
     default:
