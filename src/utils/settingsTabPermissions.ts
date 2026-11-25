@@ -4,6 +4,7 @@ export const SETTINGS_TAB_PERMISSIONS = [
   'settings:tab:location-recovery',
   'settings:tab:maintenance',
   'settings:tab:rbac',
+  'settings:tab:email',
 ] as const
 
 export type SettingsTabId =
@@ -11,6 +12,7 @@ export type SettingsTabId =
   | 'location-recovery'
   | 'maintenance'
   | 'rbac'
+  | 'email'
 
 export function settingsTabPermission(tab: SettingsTabId): string {
   return `settings:tab:${tab}`
@@ -37,6 +39,7 @@ export function visibleSettingsTabs(
     'location-recovery',
     'maintenance',
     'rbac',
+    'email',
   ]
   if (permissions.includes('settings:manage')) return order
   const fromPerms = order.filter((tab) => hasSettingsTabAccess(permissions, tab))

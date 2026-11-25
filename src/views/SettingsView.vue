@@ -22,6 +22,7 @@
     <SettingsLocationRecoveryTab v-else-if="activeTab === 'location-recovery'" />
     <SettingsMaintenanceTab v-else-if="activeTab === 'maintenance'" />
     <SettingsRbacTab v-else-if="activeTab === 'rbac'" />
+    <SettingsEmailControlTab v-else-if="activeTab === 'email'" />
   </template>
 </template>
 
@@ -35,12 +36,14 @@ import SettingsActivationsTab from '@/views/settings/SettingsActivationsTab.vue'
 import SettingsLocationRecoveryTab from '@/views/settings/SettingsLocationRecoveryTab.vue'
 import SettingsMaintenanceTab from '@/views/settings/SettingsMaintenanceTab.vue'
 import SettingsRbacTab from '@/views/settings/SettingsRbacTab.vue'
+import SettingsEmailControlTab from '@/views/settings/SettingsEmailControlTab.vue'
 
 const TAB_LABELS: Record<SettingsTabId, string> = {
   activations: 'Activations',
   'location-recovery': 'HRHIS Location Recovery',
   maintenance: 'Maintenance',
   rbac: 'Permissions & Menus',
+  email: 'Email Control',
 }
 
 const auth = useAuthStore()
