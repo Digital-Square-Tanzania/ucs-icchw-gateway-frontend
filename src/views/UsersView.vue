@@ -122,6 +122,12 @@
             class="text-xs px-2 py-0.5 rounded-md bg-white-500 dark:bg-black-500">
             {{ slotProps.data.locationName || "UNKNOWN" }}
           </span>
+          <span
+            v-else-if="col.field === 'councilAssignment'"
+            class="block text-[10px] leading-tight text-gray-500 dark:text-gray-400"
+            :title="councilAssignmentTitle(slotProps.data)">
+            {{ slotProps.data.councilAssignment || "—" }}
+          </span>
           <span v-else>
             {{ slotProps.data[col.field] ?? "—" }}
           </span>
@@ -338,6 +344,29 @@ function managerRoleName(role: unknown): string {
   return "UNKNOWN";
 }
 
+function stripPlaceSuffix(value: unknown, suffix: string): string {
+  const text = String(value ?? "").trim();
+  if (!text) return "";
+  return text.replace(new RegExp(`\\s+${suffix}$`, "i"), "").trim();
+}
+
+function councilAssignmentTitle(row: { assignedRegion?: unknown; assignedDistrict?: unknown; assignedCouncil?: unknown }): string {
+  return [row.assignedRegion, row.assignedDistrict, row.assignedCouncil]
+    .map((part) => String(part ?? "").trim())
+    .filter(Boolean)
+    .join(" · ");
+}
+
+function formatCouncilAssignment(row: Record<string, unknown>): string {
+  if (!row.assignedCouncil) return "—";
+  const parts = [
+    stripPlaceSuffix(row.assignedRegion, "Region"),
+    stripPlaceSuffix(row.assignedDistrict, "District"),
+    String(row.assignedCouncil).trim(),
+  ].filter(Boolean);
+  return parts.join(" · ") || "—";
+}
+
 function mapUsers(raw: unknown[], activeSystem: SystemCode) {
   return (raw || []).map((user) => {
     const row = user as Record<string, unknown>;
@@ -358,9 +387,7 @@ function mapUsers(raw: unknown[], activeSystem: SystemCode) {
         row.roleName != null && row.roleName !== ""
           ? String(row.roleName)
           : managerRoleName(row.role);
-      const councilAssignment = row.assignedCouncil
-        ? [row.assignedRegion, row.assignedDistrict, row.assignedCouncil].filter(Boolean).join(" · ")
-        : "—";
+      const councilAssignment = formatCouncilAssignment(row);
       return {
         id: row.id,
         email: row.email,
