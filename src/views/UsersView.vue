@@ -131,20 +131,22 @@
       <Column v-if="currentSystem === 'manager'" header="Actions" style="width: 7.5rem">
         <template #body="slotProps">
           <div class="flex justify-end gap-1">
-            <Button
+            <button
               v-if="canViewManager"
-              icon="pi pi-eye"
-              rounded
-              text
+              type="button"
+              class="inline-flex h-9 w-9 items-center justify-center rounded-full text-ucs-700 hover:bg-ucs-100 hover:text-ucs-900 dark:text-ucs-200 dark:hover:bg-ucs-900 dark:hover:text-white"
               aria-label="View manager user"
-              @click="openManager(slotProps.data, 'view')" />
-            <Button
+              @click="openManager(slotProps.data, 'view')">
+              <i class="pi pi-eye" aria-hidden="true" />
+            </button>
+            <button
               v-if="canEditManager"
-              icon="pi pi-pencil"
-              rounded
-              text
+              type="button"
+              class="inline-flex h-9 w-9 items-center justify-center rounded-full text-ucs-800 hover:bg-ucs-200 hover:text-ucs-950 dark:text-ucs-100 dark:hover:bg-ucs-800 dark:hover:text-white"
               aria-label="Edit manager user"
-              @click="openManager(slotProps.data, 'edit')" />
+              @click="openManager(slotProps.data, 'edit')">
+              <i class="pi pi-pencil" aria-hidden="true" />
+            </button>
           </div>
         </template>
       </Column>
