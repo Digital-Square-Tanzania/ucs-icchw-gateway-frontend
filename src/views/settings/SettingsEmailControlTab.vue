@@ -120,6 +120,22 @@
             </tr>
           </tbody>
         </table>
+        <div class="mt-3 flex flex-wrap items-center justify-between gap-3 text-xs text-gray-500">
+          <p>{{ activityRange }}</p>
+          <div v-if="activityMeta.totalPages > 1" class="flex items-center gap-2">
+            <button type="button" :disabled="activityMeta.page <= 1 || loading"
+              class="rounded-lg border border-gray-300 px-2 py-1 text-gray-700 disabled:opacity-40 dark:border-ucs-700 dark:text-ucs-100"
+              @click="goToActivityPage(activityMeta.page - 1)">
+              Previous
+            </button>
+            <span>Page {{ activityMeta.page }} of {{ activityMeta.totalPages }}</span>
+            <button type="button" :disabled="activityMeta.page >= activityMeta.totalPages || loading"
+              class="rounded-lg border border-gray-300 px-2 py-1 text-gray-700 disabled:opacity-40 dark:border-ucs-700 dark:text-ucs-100"
+              @click="goToActivityPage(activityMeta.page + 1)">
+              Next
+            </button>
+          </div>
+        </div>
       </div>
     </article>
   </section>
@@ -157,6 +173,7 @@ interface EmailControlSettings {
   }
   stats: { open: number; expired: number; resent: number; activated: number }
   activity: EmailActivity[]
+  activityPage?: { page: number; pageSize: number; total: number; totalPages: number }
 }
 
 const auth = useAuthStore()
@@ -184,6 +201,24 @@ const providerOptions = computed(() => [
   },
 ])
 
+const ACTIVITY_PAGE_SIZE = 20
+const activityPage = ref(1)
+
+const activityMeta = computed(() => ({
+  page: settings.value?.activityPage?.page ?? activityPage.value,
+  pageSize: settings.value?.activityPage?.pageSize ?? ACTIVITY_PAGE_SIZE,
+  total: settings.value?.activityPage?.total ?? settings.value?.activity?.length ?? 0,
+  totalPages: settings.value?.activityPage?.totalPages ?? 1,
+}))
+
+const activityRange = computed(() => {
+  const { page, pageSize, total } = activityMeta.value
+  if (!total) return ''
+  const start = (page - 1) * pageSize + 1
+  const end = Math.min(page * pageSize, total)
+  return `${start}–${end} of ${total}`
+})
+
 const statCards = [
   { key: 'open' as const, label: 'Open activations', color: 'text-ucs-700 dark:text-ucs-100' },
   { key: 'expired' as const, label: 'Expired, never resent', color: 'text-red-600' },
@@ -210,11 +245,21 @@ function modeClass(mode: string) {
   return 'bg-gray-100 text-gray-700 dark:bg-ucs-950 dark:text-ucs-200'
 }
 
-async function load() {
+function goToActivityPage(page: number) {
+  activityPage.value = page
+  void load(page)
+}
+
+async function load(page = activityPage.value) {
   loading.value = true
   try {
-    const response = await auth.apiClient.get<{ data?: EmailControlSettings }>('/user/admin/email-control')
+    const params = new URLSearchParams({
+      page: String(page),
+      pageSize: String(ACTIVITY_PAGE_SIZE),
+    })
+    const response = await auth.apiClient.get<{ data?: EmailControlSettings }>(`/user/admin/email-control?${params}`)
     settings.value = response.data?.data ?? null
+    activityPage.value = settings.value?.activityPage?.page ?? page
     if (!testTo.value && auth.user?.email) testTo.value = auth.user.email
   } catch (error) {
     toast.add({
@@ -269,7 +314,8 @@ async function sendTest() {
       detail: simulated ? 'Simulated. Sending is off, so nothing was delivered.' : `Sent to ${testTo.value}.`,
       life: 4000,
     })
-    await load()
+    activityPage.value = 1
+    await load(1)
   } catch (error) {
     toast.add({
       severity: 'error',
