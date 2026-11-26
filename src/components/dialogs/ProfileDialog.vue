@@ -30,7 +30,10 @@
         </label>
       </div>
       <div class="flex flex-wrap items-center justify-between gap-2 border-t border-gray-200 pt-4 dark:border-ucs-800">
-        <Button type="button" label="Change password" icon="pi pi-key" severity="secondary" outlined @click="askPasswordChange" />
+        <div class="flex flex-wrap gap-2">
+          <Button type="button" label="Change password" icon="pi pi-key" severity="secondary" outlined @click="askPasswordChange" />
+          <Button type="button" label="Deactivate" icon="pi pi-user-minus" severity="danger" :loading="deactivating" @click="askDeactivate" />
+        </div>
         <div class="flex gap-2">
           <Button type="button" label="Close" severity="secondary" text @click="visible = false" />
           <Button type="submit" label="Save profile" icon="pi pi-check" :loading="saving" />
@@ -64,6 +67,7 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import Dialog from 'primevue/dialog'
 import Button from 'primevue/button'
 import { useConfirm } from 'primevue/useconfirm'
@@ -73,10 +77,12 @@ import { useManagerEmailCheck } from '@/utils/managerEmailAvailability'
 
 const visible = defineModel<boolean>('visible', { default: false })
 const auth = useAuthStore()
+const router = useRouter()
 const toast = useToast()
 const confirm = useConfirm()
 const saving = ref(false)
 const changingPassword = ref(false)
+const deactivating = ref(false)
 const passwordOpen = ref(false)
 const form = ref({ firstName: '', middleName: '', lastName: '', email: '', phoneNumber: '' })
 const passwordForm = ref({ currentPassword: '', newPassword: '', confirmPassword: '' })
@@ -152,6 +158,37 @@ function askConfirmPassword() {
       void changePassword()
     },
   })
+}
+
+function askDeactivate() {
+  confirm.require({
+    header: 'Deactivate account',
+    message: 'Deactivate your account? You will be signed out. The email can be used for a new account.',
+    icon: 'pi pi-exclamation-triangle',
+    rejectProps: { label: 'Cancel', severity: 'secondary', outlined: true },
+    acceptProps: { label: 'Deactivate', severity: 'danger' },
+    accept: () => {
+      void deactivateAccount()
+    },
+  })
+}
+
+async function deactivateAccount() {
+  deactivating.value = true
+  try {
+    await auth.apiClient.post('/user/me/deactivate', {})
+    visible.value = false
+    await auth.logout(router, toast)
+  } catch (error) {
+    toast.add({
+      severity: 'error',
+      summary: 'Deactivate',
+      detail: typeof error === 'string' ? error : 'Could not deactivate the account.',
+      life: 5000,
+    })
+  } finally {
+    deactivating.value = false
+  }
 }
 
 async function changePassword() {

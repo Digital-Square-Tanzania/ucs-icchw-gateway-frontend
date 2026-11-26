@@ -4,8 +4,7 @@
       <div>
         <h2 class="text-lg font-semibold text-ucs-700 dark:text-ucs-200">Email Control</h2>
         <p class="mt-1 max-w-2xl text-sm text-gray-600 dark:text-gray-300">
-          Turn live delivery on or off, and choose Gmail or eGA. Credentials stay in the server environment.
-          The choice is stored in the database and applies to activation and other outgoing mail.
+          Delivery and provider.
         </p>
       </div>
       <button type="button" :disabled="loading"
@@ -17,7 +16,7 @@
 
     <p v-if="settings && settings.persisted === false"
       class="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
-      The database table is not ready yet. Apply the latest migration, then refresh. Until then the server uses the environment default.
+      Email settings table is missing. Run the latest migration.
     </p>
 
     <div class="grid gap-4 lg:grid-cols-2">
@@ -26,7 +25,7 @@
           <div>
             <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Sending mode</h3>
             <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-              Off means the app logs the message and continues, without contacting SMTP.
+              On sends mail. Off records it only.
             </p>
           </div>
           <button type="button" :disabled="loading || saving || !settings"
@@ -40,7 +39,7 @@
               <span class="inline-block h-4 w-4 rounded-full transition-transform"
                 :class="settings?.allowSending ? 'translate-x-4 bg-green-500' : 'translate-x-0.5 bg-gray-400'" />
             </span>
-            {{ settings?.allowSending ? 'Sending real emails' : 'Simulating emails' }}
+            {{ settings?.allowSending ? 'Sending on' : 'Sending off' }}
           </button>
         </div>
         <p class="mt-4 text-xs text-gray-500 dark:text-gray-400">
@@ -52,8 +51,8 @@
       <article class="rounded-xl border border-gray-200 bg-white p-5 dark:border-ucs-800 dark:bg-ucs-900/40">
         <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Provider</h3>
         <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-          Active provider: <span class="font-medium text-gray-800 dark:text-ucs-100">{{ providerLabel(settings?.provider) }}</span>.
-          Environment default is {{ providerLabel(settings?.envProvider) }}.
+          Gmail or eGA. Current: <span class="font-medium text-gray-800 dark:text-ucs-100">{{ providerLabel(settings?.provider) }}</span>.
+          Environment: {{ providerLabel(settings?.envProvider) }}.
         </p>
         <div class="mt-3 grid gap-2 sm:grid-cols-2">
           <button v-for="option in providerOptions" :key="option.id" type="button" :disabled="saving || loading"
@@ -82,7 +81,7 @@
     <article class="rounded-xl border border-gray-200 bg-white p-5 dark:border-ucs-800 dark:bg-ucs-900/40">
       <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Send a test</h3>
       <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-        Uses the current mode. If sending is off, the test is recorded as simulated and nothing leaves the server.
+        One message with the current settings.
       </p>
       <form class="mt-3 flex flex-col gap-2 sm:flex-row" @submit.prevent="sendTest">
         <input v-model="testTo" type="email" required placeholder="recipient@example.com"
@@ -96,7 +95,7 @@
 
     <article class="rounded-xl border border-gray-200 bg-white p-5 dark:border-ucs-800 dark:bg-ucs-900/40">
       <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Recent deliveries</h3>
-      <p v-if="!settings?.activity?.length" class="mt-2 text-xs text-gray-500">No mail has been attempted since this log started.</p>
+      <p v-if="!settings?.activity?.length" class="mt-2 text-xs text-gray-500">No deliveries yet.</p>
       <div v-else class="mt-3 overflow-auto">
         <table class="min-w-full text-left text-xs">
           <thead class="text-gray-500">

@@ -1,5 +1,5 @@
 <template>
-  <PageTitle heading="Settings" subtext="Council operations, activations, recovery, and maintenance" />
+  <PageTitle heading="Settings" subtext="Configuration" />
 
   <div v-if="!auth.hasAnySettingsAccess"
     class="rounded-xl border border-gray-200 dark:border-ucs-800 p-6 bg-white dark:bg-ucs-900/40">

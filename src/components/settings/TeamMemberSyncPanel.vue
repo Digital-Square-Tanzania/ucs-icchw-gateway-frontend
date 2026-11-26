@@ -2,8 +2,7 @@
   <article class="rounded-xl border border-gray-200 dark:border-ucs-800 bg-white dark:bg-ucs-900/40 p-5 shadow-sm">
     <h3 class="text-base font-semibold text-gray-900 dark:text-white">Sync ICCHW Records from OpenMRS</h3>
     <p class="mt-2 text-sm text-gray-600 dark:text-gray-300">
-      Refresh <code class="text-xs">openmrs_team_members</code> from live OpenMRS data (names, email, phone, team,
-      facility), then remove local rows whose OpenMRS team-member UUID no longer exists.
+      Team members from OpenMRS.
     </p>
 
     <button

@@ -17,7 +17,7 @@
 
     <article class="rounded-xl border border-gray-200 dark:border-ucs-800 bg-white dark:bg-ucs-900/40 p-4 lg:col-span-2">
       <h3 class="text-base font-semibold mb-2">Permissions for {{ selectedRole?.name ?? '—' }}</h3>
-      <p class="text-xs text-gray-500 mb-3">Each box is required on its own. Unchecked items stay closed, including when <code>settings:manage</code> is on.</p>
+      <p class="text-xs text-gray-500 mb-3">Only checked permissions are granted.</p>
       <div class="max-h-72 overflow-y-auto grid sm:grid-cols-2 gap-1 text-xs font-mono">
         <label v-for="p in permissions" :key="p.id" class="flex items-center gap-2 py-1">
           <input v-model="selectedPermIds" type="checkbox" :value="p.id" />

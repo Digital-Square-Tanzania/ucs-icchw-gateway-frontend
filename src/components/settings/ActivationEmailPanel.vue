@@ -24,7 +24,7 @@
       class="rounded-xl border border-gray-200 dark:border-ucs-800 bg-gray-50 dark:bg-ucs-900/30 p-4">
       <h3 class="text-sm font-semibold text-gray-700 dark:text-ucs-200 mb-1">Resend location</h3>
       <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">
-        Pick Region → District → Council to scope metrics and the category list.
+        One council.
       </p>
       <div class="grid gap-3 sm:grid-cols-3">
         <div>
@@ -98,9 +98,7 @@
       class="rounded-xl border border-gray-200 dark:border-ucs-800 bg-white dark:bg-ucs-900/40 p-4">
       <h3 class="text-sm font-semibold text-gray-900 dark:text-white mb-1">Recent activation activity</h3>
       <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">
-        Activation email slugs created per day (last {{ matrixDays }} days).
-        For HRHIS register volume vs successful accounts, see the <strong>HRHIS Registrations</strong> chart at the top
-        of Settings.
+        Activation emails per day, last {{ matrixDays }} days.
       </p>
       <div class="relative flex flex-wrap gap-1">
         <button v-for="cell in matrix" :key="cell.date" type="button"

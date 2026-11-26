@@ -83,7 +83,7 @@ const props = withDefaults(
     region: '',
     district: '',
     council: '',
-    subtitle: 'All metrics and actions on this page apply to this location only.',
+    subtitle: 'This location.',
     stats: null,
   },
 )

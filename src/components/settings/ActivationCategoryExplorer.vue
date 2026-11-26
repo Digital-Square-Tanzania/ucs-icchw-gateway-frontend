@@ -4,13 +4,13 @@
       <div>
         <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Activations by category</h3>
         <p class="text-xs text-gray-500 dark:text-gray-400">
-          Activations grouped by category.
+          By status.
         </p>
         <p v-if="scopeLabel" class="mt-1 text-xs text-ucs-700 dark:text-ucs-300">
           Filtered to {{ scopeLabel }}.
         </p>
         <p v-else-if="!councilLocked" class="mt-1 text-xs text-gray-400">
-          All councils. Choose a council under Resend location to narrow this list.
+          All councils.
         </p>
       </div>
       <button type="button" class="rounded-lg border border-gray-300 dark:border-ucs-700 px-3 py-1.5 text-sm"

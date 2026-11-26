@@ -3,7 +3,7 @@
     <div>
       <h2 class="text-lg font-semibold text-ucs-700 dark:text-ucs-200 mb-3">Data sync</h2>
       <p class="text-sm text-gray-600 dark:text-gray-300 mb-4">
-        DHIS2 user sync and OpenMRS location sync (dashboard reporting and hierarchy filters).
+        DHIS2 users and OpenMRS locations.
       </p>
       <div class="grid gap-4 lg:grid-cols-2">
         <article
@@ -50,7 +50,7 @@
         <article class="rounded-xl border border-gray-200 dark:border-ucs-800 bg-white dark:bg-ucs-900/40 p-5 shadow-sm">
           <h3 class="text-base font-semibold text-gray-900 dark:text-white">Remove orphaned local CHW records</h3>
           <p class="mt-2 text-sm text-gray-600 dark:text-gray-300">
-            Purge-only pass when you do not need a full OpenMRS refresh.
+            Local CHW rows with no OpenMRS team member.
           </p>
           <button
             type="button"
@@ -66,7 +66,7 @@
 
     <section v-if="auth.isUcsDeveloper" class="rounded-xl border border-amber-200/80 dark:border-amber-900/50 bg-white dark:bg-ucs-900/40 p-5">
       <h2 class="text-lg font-semibold text-ucs-700 dark:text-ucs-200">Advanced (developer)</h2>
-      <p class="text-sm text-amber-700 dark:text-amber-300 mt-1 mb-4">Location, team, and recovery maintenance.</p>
+      <p class="text-sm text-amber-700 dark:text-amber-300 mt-1 mb-4">Developer only.</p>
       <div class="grid gap-4 lg:grid-cols-2">
         <article
           v-for="tool in devTools"

@@ -2,17 +2,17 @@
   <article class="rounded-xl border border-gray-200 dark:border-ucs-800 bg-white dark:bg-ucs-900/40 p-5 shadow-sm">
     <h3 class="text-base font-semibold text-gray-900 dark:text-white">HRHIS Location Failure Recovery</h3>
     <p class="mt-2 text-sm text-gray-600 dark:text-gray-300">
-      Scan failed HRHIS location codes within the selected council.
+      Failed location codes in the selected council.
     </p>
 
     <div class="mt-4 rounded-lg border border-gray-200 dark:border-ucs-800 bg-gray-50 dark:bg-ucs-950/40 p-4">
       <CouncilHierarchyHero v-if="councilLocked" class="mb-4" :region="selectedRegion" :district="selectedDistrict"
         :council="selectedCouncil"
-        subtitle="Scan and recover HRHIS register failures for location codes within your assigned council." />
+        subtitle="Assigned council." />
 
       <template v-if="!councilLocked">
         <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">
-          Pick Region → District → Council, then scan.
+          Region, district, and council.
         </p>
         <div class="grid gap-3 sm:grid-cols-3">
           <div>

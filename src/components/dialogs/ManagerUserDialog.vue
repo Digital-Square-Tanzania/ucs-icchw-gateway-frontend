@@ -87,7 +87,10 @@
       <p v-if="hierarchyError" class="text-xs text-amber-700">{{ hierarchyError }}</p>
 
       <div class="flex flex-wrap items-center justify-between gap-2 border-t border-gray-200 pt-4 dark:border-ucs-800">
-        <Button type="button" label="Password reset" icon="pi pi-key" severity="secondary" outlined :loading="resetting" @click="confirmReset" />
+        <div class="flex flex-wrap gap-2">
+          <Button type="button" label="Password reset" icon="pi pi-key" severity="secondary" outlined :loading="resetting" @click="confirmReset" />
+          <Button type="button" label="Deactivate" icon="pi pi-user-minus" severity="danger" :loading="deactivating" @click="confirmDeactivate" />
+        </div>
         <div class="flex gap-2">
           <Button type="button" label="Close" severity="secondary" text @click="visible = false" />
           <Button type="submit" label="Update details" icon="pi pi-check" :loading="saving" />
@@ -99,6 +102,7 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { useManagerEmailCheck } from '@/utils/managerEmailAvailability'
 import Dialog from 'primevue/dialog'
 import Button from 'primevue/button'
@@ -146,10 +150,12 @@ const visible = defineModel<boolean>('visible', { default: false })
 const emit = defineEmits<{ saved: [] }>()
 
 const auth = useAuthStore()
+const router = useRouter()
 const toast = useToast()
 const confirm = useConfirm()
 const saving = ref(false)
 const resetting = ref(false)
+const deactivating = ref(false)
 const roles = ref<RoleOption[]>([])
 const hierarchy = ref<Hierarchy>({})
 const regions = ref<string[]>([])
@@ -349,6 +355,49 @@ function confirmReset() {
       void sendReset()
     },
   })
+}
+
+function confirmDeactivate() {
+  if (!props.user?.id) return
+  const name = [props.user.firstName, props.user.lastName].filter(Boolean).join(' ') || props.user.email || 'this account'
+  const self = props.user.id === auth.user?.id
+  confirm.require({
+    header: 'Deactivate account',
+    message: self
+      ? 'Deactivate your account? You will be signed out. The email can be used for a new account.'
+      : `Deactivate ${name}? They cannot sign in. The email can be used for a new account.`,
+    icon: 'pi pi-exclamation-triangle',
+    rejectProps: { label: 'Cancel', severity: 'secondary', outlined: true },
+    acceptProps: { label: 'Deactivate', severity: 'danger' },
+    accept: () => {
+      void deactivateAccount()
+    },
+  })
+}
+
+async function deactivateAccount() {
+  if (!props.user?.id) return
+  const self = props.user.id === auth.user?.id
+  deactivating.value = true
+  try {
+    await auth.apiClient.post(`/user/admin/manager/${props.user.id}/deactivate`, {})
+    visible.value = false
+    emit('saved')
+    if (self) {
+      await auth.logout(router, toast)
+      return
+    }
+    toast.add({ severity: 'success', summary: 'Deactivated', detail: 'The account is closed. The email can be used again.', life: 4000 })
+  } catch (error) {
+    toast.add({
+      severity: 'error',
+      summary: 'Deactivate',
+      detail: typeof error === 'string' ? error : 'Could not deactivate the account.',
+      life: 5000,
+    })
+  } finally {
+    deactivating.value = false
+  }
 }
 
 async function sendReset() {
