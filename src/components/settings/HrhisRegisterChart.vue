@@ -38,9 +38,17 @@ const props = withDefaults(
   defineProps<{
     buckets: HrhisBucket[]
     emptyLabel?: string
+    includeRecovered?: boolean
+    incomingLabel?: string
+    succeededLabel?: string
+    failedLabel?: string
   }>(),
   {
     emptyLabel: 'No HRHIS registration data for this period.',
+    includeRecovered: true,
+    incomingLabel: 'Incoming requests',
+    succeededLabel: 'Succeeded',
+    failedLabel: 'Failed (open)',
   },
 )
 
@@ -55,7 +63,7 @@ const chartData = computed(() => ({
   }),
   datasets: [
     {
-      label: 'Incoming requests',
+      label: props.incomingLabel,
       data: props.buckets.map((b) => b.incoming),
       borderColor: '#218cc5',
       backgroundColor: 'rgba(33, 140, 197, 0.12)',
@@ -65,7 +73,7 @@ const chartData = computed(() => ({
       borderWidth: 2,
     },
     {
-      label: 'Succeeded',
+      label: props.succeededLabel,
       data: props.buckets.map((b) => b.succeeded),
       borderColor: '#16a34a',
       backgroundColor: 'rgba(22, 163, 74, 0.08)',
@@ -75,7 +83,7 @@ const chartData = computed(() => ({
       borderWidth: 2,
     },
     {
-      label: 'Failed (open)',
+      label: props.failedLabel,
       data: props.buckets.map((b) => b.failed),
       borderColor: '#dc2626',
       backgroundColor: 'transparent',
@@ -85,17 +93,21 @@ const chartData = computed(() => ({
       borderWidth: 2,
       borderDash: [4, 3],
     },
-    {
-      label: 'Recovered (retry)',
-      data: props.buckets.map((b) => b.recovered ?? 0),
-      borderColor: '#d97706',
-      backgroundColor: 'rgba(217, 119, 6, 0.08)',
-      fill: false,
-      tension: 0.3,
-      pointRadius: 2,
-      borderWidth: 2,
-      borderDash: [2, 2],
-    },
+    ...(props.includeRecovered
+      ? [
+          {
+            label: 'Recovered (retry)',
+            data: props.buckets.map((b) => b.recovered ?? 0),
+            borderColor: '#d97706',
+            backgroundColor: 'rgba(217, 119, 6, 0.08)',
+            fill: false,
+            tension: 0.3,
+            pointRadius: 2,
+            borderWidth: 2,
+            borderDash: [2, 2],
+          },
+        ]
+      : []),
   ],
 }))
 

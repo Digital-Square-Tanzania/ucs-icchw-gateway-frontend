@@ -1,10 +1,21 @@
 <template>
-  <PageTitle heading="Analytics" subtext="Analysis of HRHIS incoming registrations" />
+  <PageTitle heading="Analytics" subtext="HRHIS and FFARS" />
+
+  <nav class="mb-4 flex gap-2 border-b border-gray-200 pb-2 dark:border-ucs-800" aria-label="Analytics source">
+    <button v-for="source in sourceTabs" :key="source.id" type="button"
+      class="rounded-t-lg border-b-2 px-4 py-2 text-sm font-medium transition-colors"
+      :class="sourceTab === source.id
+        ? 'border-ucs-500 bg-ucs-50/80 text-ucs-700 dark:bg-ucs-900/60 dark:text-ucs-100'
+        : 'border-transparent text-gray-600 hover:text-ucs-600 dark:text-gray-400'"
+      @click="sourceTab = source.id">
+      {{ source.label }}
+    </button>
+  </nav>
 
   <article class="rounded-xl border border-gray-200 dark:border-ucs-800 bg-white dark:bg-ucs-900/40 p-5 shadow-sm">
     <CouncilHierarchyHero v-if="councilLocked" :region="selectedRegion" :district="selectedDistrict"
-      :council="selectedCouncil" :stats="peerStats"
-      subtitle="HRHIS register analytics, incoming volume, failures, and recoveries for your council." />
+      :council="selectedCouncil" :stats="sourceTab === 'hrhis' ? peerStats : null"
+      :subtitle="sourceTab === 'hrhis' ? 'HRHIS registrations for this council.' : 'FFARS eligibility for this council.'" />
 
     <template v-else>
       <h2 class="text-base font-semibold text-gray-900 dark:text-white">Council scope</h2>
@@ -55,7 +66,7 @@
           <option :value="0">Over 365 days</option>
         </select>
       </div>
-      <button type="button" :disabled="!selectedCouncil || loading"
+      <button v-if="sourceTab === 'hrhis'" type="button" :disabled="!selectedCouncil || loading"
         class="rounded-lg bg-ucs-500 px-4 py-2 text-sm font-medium text-white hover:bg-ucs-600 disabled:opacity-50 disabled:cursor-not-allowed"
         @click="runAnalytics()">
         {{ loading ? 'Running…' : 'Run analytics' }}
@@ -71,6 +82,7 @@
     </template>
   </article>
 
+  <template v-if="sourceTab === 'hrhis'">
   <HrhisRegistrationsSection v-if="selectedCouncil" class="mt-6" :region="selectedRegion" :district="selectedDistrict"
     :council="selectedCouncil" :days="days" />
 
@@ -294,6 +306,11 @@
     </section>
   </template>
 
+  </template>
+
+  <FfarsEligibilitySection v-else-if="selectedCouncil" :region="selectedRegion" :district="selectedDistrict"
+    :council="selectedCouncil" :days="days" />
+
   <DuplicateResolutionDialog v-model="duplicateDialogOpen" :scope="duplicateScope" :nin="duplicateNin"
     @resolved="onDuplicateResolved" />
 </template>
@@ -303,6 +320,7 @@ import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
 import PageTitle from '@/components/layout/PageTitle.vue'
 import CouncilHierarchyHero from '@/components/layout/CouncilHierarchyHero.vue'
 import HrhisRegistrationsSection from '@/components/analytics/HrhisRegistrationsSection.vue'
+import FfarsEligibilitySection from '@/components/analytics/FfarsEligibilitySection.vue'
 import DuplicateResolutionDialog from '@/components/dialogs/DuplicateResolutionDialog.vue'
 import { useAuthStore } from '@/stores/auth'
 
@@ -441,6 +459,11 @@ const hierarchyLoading = ref(false)
 const hierarchyError = ref('')
 const error = ref('')
 const data = ref<AnalyticsData | null>(null)
+const sourceTab = ref<'hrhis' | 'ffars'>('hrhis')
+const sourceTabs = [
+  { id: 'hrhis' as const, label: 'HRHIS' },
+  { id: 'ffars' as const, label: 'FFARS' },
+]
 const activeTab = ref<'accepted' | 'rejected' | 'updates' | 'duplicates'>('accepted')
 const selectedFacilities = ref<string[]>([])
 const facilityFilterOpen = ref(false)
