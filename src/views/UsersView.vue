@@ -128,12 +128,38 @@
         </template>
       </Column>
 
+      <Column v-if="currentSystem === 'manager'" header="Actions" style="width: 7.5rem">
+        <template #body="slotProps">
+          <div class="flex justify-end gap-1">
+            <Button
+              v-if="canViewManager"
+              icon="pi pi-eye"
+              rounded
+              text
+              aria-label="View manager user"
+              @click="openManager(slotProps.data, 'view')" />
+            <Button
+              v-if="canEditManager"
+              icon="pi pi-pencil"
+              rounded
+              text
+              aria-label="Edit manager user"
+              @click="openManager(slotProps.data, 'edit')" />
+          </div>
+        </template>
+      </Column>
+
       <template #empty>
         <div class="text-center text-gray-500">No users found.</div>
       </template>
     </DataTable>
 
     <UserDetailsDialog v-model="showDialog" :userUuid="selectedUser || null" />
+    <ManagerUserDialog
+      v-model:visible="managerDialogOpen"
+      :mode="managerDialogMode"
+      :user="selectedManager"
+      @saved="fetchUsers('manager')" />
   </div>
 </template>
 
@@ -148,6 +174,7 @@ import PageTitle from "@/components/layout/PageTitle.vue";
 import ApiClient from "@/utilities/ApiClient";
 import { useAuthStore } from "@/stores/auth";
 import { canAccessUserTab } from "@/utils/userTabPermissions";
+import ManagerUserDialog, { type ManagerRow } from "@/components/dialogs/ManagerUserDialog.vue";
 import { useToast } from "primevue";
 import UserDetailsDialog from "@/components/dialogs/UserDetailsDialog.vue";
 import {
@@ -238,6 +265,18 @@ const managedRoleNotice = computed(() => {
   return "iCCHW accounts are registered from HRHIS. This list is view only.";
 });
 
+const canViewManager = computed(() => canAccessUserTab(authStore.permissions, "manager", "view"));
+const canEditManager = computed(() => canAccessUserTab(authStore.permissions, "manager", "create"));
+const managerDialogOpen = ref(false);
+const managerDialogMode = ref<"view" | "edit">("view");
+const selectedManager = ref<ManagerRow | null>(null);
+
+function openManager(row: ManagerRow, mode: "view" | "edit") {
+  selectedManager.value = row;
+  managerDialogMode.value = mode;
+  managerDialogOpen.value = true;
+}
+
 const canAddUser = computed(() => {
   const system = currentSystem.value;
   if (system === "dhis2") return false;
@@ -321,13 +360,22 @@ function mapUsers(raw: unknown[], activeSystem: SystemCode) {
         ? [row.assignedRegion, row.assignedDistrict, row.assignedCouncil].filter(Boolean).join(" · ")
         : "—";
       return {
+        id: row.id,
         email: row.email,
         firstName: row.firstName,
         middleName: row.middleName || "—",
         lastName: row.lastName,
         role: roleLabel,
+        roleId: row.roleId ?? null,
+        roleName: row.roleName || roleLabel,
         councilAssignment,
+        assignedRegion: row.assignedRegion || "",
+        assignedDistrict: row.assignedDistrict || "",
+        assignedCouncil: row.assignedCouncil || "",
         phoneNumber: row.phoneNumber,
+        status: row.status,
+        lastLogin: row.lastLogin,
+        joinDate: row.joinDate,
       };
     }
     return {

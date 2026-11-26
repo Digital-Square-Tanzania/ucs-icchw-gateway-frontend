@@ -58,6 +58,7 @@ export const useAuthStore = defineStore('auth', {
     hasPermission: (state) => (code: string) =>
       state.permissions.includes('settings:manage') || state.permissions.includes(code),
     canAccessSettingsTab: (state) => (tab: SettingsTabId) => {
+      if (tab === 'email-control') return state.permissions.includes('settings:tab:email-control')
       if (hasSettingsTabAccess(state.permissions, tab)) return true
       const role = state.user?.role ?? getRoleFromToken(state.accessToken)
       if (role === Role.UCS_DEVELOPER || role === Role.MOH_ADMIN) return true

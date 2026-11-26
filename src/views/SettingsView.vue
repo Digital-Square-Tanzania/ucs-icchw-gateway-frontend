@@ -22,7 +22,7 @@
     <SettingsLocationRecoveryTab v-else-if="activeTab === 'location-recovery'" />
     <SettingsMaintenanceTab v-else-if="activeTab === 'maintenance'" />
     <SettingsRbacTab v-else-if="activeTab === 'rbac'" />
-    <SettingsEmailControlTab v-else-if="activeTab === 'email'" />
+    <SettingsEmailControlTab v-else-if="activeTab === 'email-control'" />
   </template>
 </template>
 
@@ -43,7 +43,7 @@ const TAB_LABELS: Record<SettingsTabId, string> = {
   'location-recovery': 'HRHIS Location Recovery',
   maintenance: 'Maintenance',
   rbac: 'Permissions & Menus',
-  email: 'Email Control',
+  'email-control': 'Email Control',
 }
 
 const auth = useAuthStore()
