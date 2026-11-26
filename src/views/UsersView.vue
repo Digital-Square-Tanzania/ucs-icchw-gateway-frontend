@@ -268,13 +268,13 @@ const managedRoleNotice = computed(() => {
   const role = selectedOpenMrsRoleRecord.value;
   if (currentSystem.value !== "openmrs" || !role || !isExternallyManagedOpenMrsRole(role)) return "";
   if (isPeerEducatorRole(role)) {
-    return "Peer Educators are registered in the peers app. This list is view only.";
+    return "Peer Educators are registered in the peers app.";
   }
-  return "iCCHW accounts are registered from HRHIS. This list is view only.";
+  return "iCCHW accounts are registered from HRHIS.";
 });
 
 const canViewManager = computed(() => canAccessUserTab(authStore.permissions, "manager", "view"));
-const canEditManager = computed(() => canAccessUserTab(authStore.permissions, "manager", "create"));
+const canEditManager = computed(() => canAccessUserTab(authStore.permissions, "manager", "update"));
 const managerDialogOpen = ref(false);
 const managerDialogMode = ref<"view" | "edit">("view");
 const selectedManager = ref<ManagerRow | null>(null);
@@ -288,7 +288,6 @@ function openManager(row: ManagerRow, mode: "view" | "edit") {
 const canAddUser = computed(() => {
   const system = currentSystem.value;
   if (system === "dhis2") return false;
-  if (system === "openmrs" && managedRoleNotice.value) return false;
   return canAccessUserTab(authStore.permissions, system, "create");
 });
 
