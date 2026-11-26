@@ -9,7 +9,7 @@
       </div>
       <button type="button" :disabled="loading"
         class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:border-ucs-400 dark:border-ucs-700 dark:text-ucs-200"
-        @click="load">
+        @click="load()">
         {{ loading ? 'Refreshing…' : 'Refresh' }}
       </button>
     </div>
