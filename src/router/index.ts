@@ -107,6 +107,18 @@ router.beforeEach(async (to, from, next) => {
     }
   }
 
+  if (to.path === '/dashboard' || to.path === '/analytics') {
+    if (!auth.permissions.length) await auth.fetchProfile()
+  }
+  if (to.path === '/dashboard' && auth.permissions.length && !auth.canAccessNav('/dashboard')) {
+    next(auth.homePath)
+    return
+  }
+  if (to.path === '/analytics' && auth.permissions.length && !auth.canAccessAnalytics) {
+    next(auth.homePath)
+    return
+  }
+
   if (to.path === '/users' || to.path.startsWith('/adduser')) {
     if (!auth.permissions.length) await auth.fetchProfile()
     if (!auth.canAccessNav('/users')) {

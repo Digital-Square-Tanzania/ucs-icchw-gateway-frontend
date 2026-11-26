@@ -18,8 +18,10 @@ const API_URL = import.meta.env.VITE_API_URL
 export interface AuthUser {
   id: string
   firstName: string
+  middleName?: string | null
   lastName: string
   email: string
+  phoneNumber?: string | null
   role: string
   joinDate?: string
   lastLogin?: string
@@ -55,12 +57,11 @@ export const useAuthStore = defineStore('auth', {
       }
     },
     isCouncilCoordinator: (state) => state.user?.role === Role.COUNCIL_COORDINATOR,
-    hasPermission: (state) => (code: string) =>
-      state.permissions.includes('settings:manage') || state.permissions.includes(code),
+    hasPermission: (state) => (code: string) => state.permissions.includes(code),
     canAccessSettingsTab: (state) => (tab: SettingsTabId) => {
-      if (tab === 'email-control') return state.permissions.includes('settings:tab:email-control')
-      if (hasSettingsTabAccess(state.permissions, tab)) return true
+      if (state.permissions.length) return hasSettingsTabAccess(state.permissions, tab)
       const role = state.user?.role ?? getRoleFromToken(state.accessToken)
+      if (tab === 'email-control') return false
       if (role === Role.UCS_DEVELOPER || role === Role.MOH_ADMIN) return true
       if (
         role === Role.COUNCIL_COORDINATOR &&
@@ -71,41 +72,32 @@ export const useAuthStore = defineStore('auth', {
       return false
     },
     hasAnySettingsAccess: (state) => {
-      if (hasAnySettingsTabAccess(state.permissions)) return true
+      if (state.permissions.length) return hasAnySettingsTabAccess(state.permissions)
       const role = state.user?.role ?? getRoleFromToken(state.accessToken)
       return role === Role.UCS_DEVELOPER || role === Role.MOH_ADMIN || role === Role.COUNCIL_COORDINATOR
     },
     canAccessSettings: (state) => {
-      if (state.permissions.includes('settings:manage')) return true
-      if (state.permissions.includes('menu:settings')) return true
-      if (hasAnySettingsTabAccess(state.permissions)) return true
-      if (!state.permissions.length) {
-        const role = state.user?.role ?? getRoleFromToken(state.accessToken)
-        return role === Role.UCS_DEVELOPER || role === Role.MOH_ADMIN || role === Role.COUNCIL_COORDINATOR
+      if (state.permissions.length) {
+        return state.permissions.includes('menu:settings') || hasAnySettingsTabAccess(state.permissions)
       }
-      return false
+      const role = state.user?.role ?? getRoleFromToken(state.accessToken)
+      return role === Role.UCS_DEVELOPER || role === Role.MOH_ADMIN || role === Role.COUNCIL_COORDINATOR
     },
     canAccessAnalytics: (state) => {
-      if (state.permissions.includes('settings:manage') || state.permissions.includes('menu:analytics')) {
-        return true
-      }
-      if (!state.permissions.length) {
-        const role = state.user?.role ?? getRoleFromToken(state.accessToken)
-        return canAccessAnalytics(role) || role === Role.COUNCIL_COORDINATOR
-      }
-      return false
+      if (state.permissions.length) return state.permissions.includes('menu:analytics')
+      const role = state.user?.role ?? getRoleFromToken(state.accessToken)
+      return canAccessAnalytics(role) || role === Role.COUNCIL_COORDINATOR
     },
     /** Default route after login or visiting `/`. */
     homePath: (state) => {
       const role = state.user?.role ?? getRoleFromToken(state.accessToken)
-      if (role === Role.COUNCIL_COORDINATOR) return '/analytics'
-      if (
-        state.permissions.includes('menu:analytics') &&
-        !state.permissions.includes('menu:dashboard') &&
-        !state.permissions.includes('settings:manage')
-      ) {
-        return '/analytics'
+      if (!state.permissions.length) {
+        return role === Role.COUNCIL_COORDINATOR ? '/analytics' : '/dashboard'
       }
+      if (state.permissions.includes('menu:dashboard')) return '/dashboard'
+      if (state.permissions.includes('menu:analytics')) return '/analytics'
+      if (state.permissions.includes('menu:users')) return '/users'
+      if (state.permissions.includes('menu:settings')) return '/settings'
       return '/dashboard'
     },
     canAccessNav: (state) => (path: string) => canAccessNavPath(state.permissions, path),

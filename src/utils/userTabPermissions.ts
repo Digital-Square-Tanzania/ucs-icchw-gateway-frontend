@@ -16,7 +16,6 @@ export function canAccessUserTab(
   system: UserSystem,
   action: 'view' | 'create',
 ): boolean {
-  if (permissions.includes('settings:manage')) return true
   if (permissions.includes(userTabPermission(system, action))) return true
   if (action === 'view' && permissions.includes(userTabPermission(system, 'create'))) return true
   if (action === 'view' && !hasGranularUserTabs(permissions) && permissions.includes('menu:users')) {

@@ -19,13 +19,10 @@ export function settingsTabPermission(tab: SettingsTabId): string {
 }
 
 export function hasSettingsTabAccess(permissions: string[], tab: SettingsTabId): boolean {
-  if (tab === 'email-control') return permissions.includes('settings:tab:email-control')
-  if (permissions.includes('settings:manage')) return true
   return permissions.includes(settingsTabPermission(tab))
 }
 
 export function hasAnySettingsTabAccess(permissions: string[]): boolean {
-  if (permissions.includes('settings:manage')) return true
   return SETTINGS_TAB_PERMISSIONS.some(
     (code) => code.startsWith('settings:tab:') && permissions.includes(code),
   )
@@ -42,8 +39,7 @@ export function visibleSettingsTabs(
     'rbac',
     'email-control',
   ]
-  const granted = order.filter((tab) => hasSettingsTabAccess(permissions, tab))
-  if (granted.length) return granted
+  if (permissions.length) return order.filter((tab) => hasSettingsTabAccess(permissions, tab))
   if (role === 'UCS_DEVELOPER' || role === 'MOH_ADMIN') {
     return order.filter((tab) => tab !== 'email-control')
   }

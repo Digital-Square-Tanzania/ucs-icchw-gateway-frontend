@@ -20,12 +20,25 @@
         <MainLink v-if="auth.canAccessAnalytics" route="/analytics" title="Analytics" />
         <MainLink v-if="auth.canAccessSettings" route="/settings" title="Settings" />
       </div>
-      <div id="user-area" class="p-4 tracking-wider w-1/4">
-        <span
-          class="flex flex-row items-center justify-start font-semibold text-white dark:text-ucs-300 cursor-pointer hover:text-ucs-100 transition-colors p-2"
-          @click="logout">
-          Logout
-        </span>
+      <div id="user-area" class="relative p-4">
+        <button
+          type="button"
+          class="flex max-w-48 items-center gap-2 rounded-lg px-2 py-2 font-semibold text-white hover:bg-white/10"
+          @click.stop="accountOpen = !accountOpen">
+          <span class="truncate">{{ displayName }}</span>
+          <i class="pi pi-chevron-down text-xs" aria-hidden="true" />
+        </button>
+        <div
+          v-if="accountOpen"
+          class="absolute right-4 z-20 mt-1 w-44 overflow-hidden rounded-lg bg-white py-1 text-sm text-gray-800 shadow-lg"
+          @click.stop>
+          <button type="button" class="block w-full px-3 py-2 text-left hover:bg-ucs-50" @click="openProfile">
+            My Profile
+          </button>
+          <button type="button" class="block w-full px-3 py-2 text-left hover:bg-ucs-50" @click="logout">
+            Logout
+          </button>
+        </div>
       </div>
     </div>
   </header>
@@ -38,6 +51,7 @@
     <TransparentCover v-if="auth.loading" />
     <Toast />
     <ConfirmDialog />
+    <ProfileDialog v-model:visible="profileOpen" />
     <RouterView :key="route.fullPath" />
     <p
       v-if="route.path !== '/login'"
@@ -54,8 +68,9 @@ import { useAuthStore } from '@/stores/auth'
 import { useToast } from 'primevue/usetoast'
 import Toast from 'primevue/toast'
 import ConfirmDialog from 'primevue/confirmdialog'
-import { onMounted, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import MainLink from './components/layout/MainLink.vue'
+import ProfileDialog from './components/dialogs/ProfileDialog.vue'
 import TransparentCover from './components/layout/TransparentCover.vue'
 import { useSyncStore } from '@/stores/sync'
 
@@ -86,9 +101,29 @@ const toast = useToast()
 const route = useRoute()
 const appBuildId = __APP_BUILD_ID__
 
-const logout = () => {
-  auth.logout(router, toast);
+const accountOpen = ref(false)
+const profileOpen = ref(false)
+const displayName = computed(() => {
+  const name = [auth.user?.firstName, auth.user?.lastName].filter(Boolean).join(' ')
+  return name || auth.user?.email || 'Account'
+})
+
+function closeAccountMenu() {
+  accountOpen.value = false
 }
+
+function openProfile() {
+  accountOpen.value = false
+  profileOpen.value = true
+}
+
+const logout = () => {
+  accountOpen.value = false
+  auth.logout(router, toast)
+}
+
+onMounted(() => document.addEventListener('click', closeAccountMenu))
+onUnmounted(() => document.removeEventListener('click', closeAccountMenu))
 
 // Show 404 toast if visiting NotFound page
 watch(route, () => {

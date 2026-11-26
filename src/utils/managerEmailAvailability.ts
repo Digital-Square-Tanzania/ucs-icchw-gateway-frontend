@@ -5,7 +5,12 @@ export type EmailAvailability = "idle" | "checking" | "available" | "taken" | "i
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-export function useManagerEmailCheck(api: ApiClient, email: Ref<string>, excludeId?: Ref<string | undefined>) {
+export function useManagerEmailCheck(
+  api: ApiClient,
+  email: Ref<string>,
+  excludeId?: Ref<string | undefined>,
+  path = "/user/admin/email-available",
+) {
   const status = ref<EmailAvailability>("idle");
   let timer: ReturnType<typeof setTimeout> | undefined;
   let request = 0;
@@ -26,7 +31,7 @@ export function useManagerEmailCheck(api: ApiClient, email: Ref<string>, exclude
       const params = new URLSearchParams({ email: trimmed });
       if (excludeId?.value) params.set("excludeId", excludeId.value);
       const response = await api.get<{ data?: { available?: boolean; reason?: string } }>(
-        `/user/admin/email-available?${params.toString()}`,
+        `${path}?${params.toString()}`,
       );
       if (current !== request) return;
       const data = response.data?.data;
