@@ -4,7 +4,8 @@
       <div>
         <h2 class="text-lg font-semibold text-ucs-700 dark:text-ucs-200">FFARS eligibility</h2>
         <p class="text-sm text-gray-600 dark:text-gray-300">
-          Payment eligibility calls. {{ rangeLabel }}
+          {{ scopeCouncil ? `Payment eligibility calls for ${scopeCouncil}.` : 'Payment eligibility calls.' }}
+          {{ rangeLabel }}
         </p>
       </div>
       <div class="flex flex-wrap items-end gap-2">
@@ -165,6 +166,7 @@ const totals = ref<Totals>({
   incoming: 0, succeeded: 0, failed: 0, facilities: 0, eligible: 0, ineligible: 0, unclassified: 0, chwCount: 0,
 })
 const rangeLabel = ref('This month')
+const scopeCouncil = ref('')
 const loading = ref(false)
 const error = ref('')
 
@@ -232,6 +234,7 @@ async function load() {
     const response = await auth.apiClient.get<{
       data?: {
         label?: string
+        scope?: { council?: string } | null
         bucket?: 'day' | 'month'
         buckets?: HrhisBucket[]
         recent?: FfarsRow[]
@@ -243,6 +246,7 @@ async function load() {
     chartBucket.value = data?.bucket === 'month' ? 'month' : 'day'
     recent.value = data?.recent ?? []
     rangeLabel.value = data?.label || ''
+    scopeCouncil.value = data?.scope?.council || ''
     totals.value = {
       incoming: data?.totals?.incoming ?? 0,
       succeeded: data?.totals?.succeeded ?? 0,

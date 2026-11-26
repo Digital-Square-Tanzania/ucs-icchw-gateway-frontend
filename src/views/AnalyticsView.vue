@@ -1,7 +1,11 @@
 <template>
-  <PageTitle heading="Analytics" subtext="HRHIS and FFARS" />
+  <PageTitle heading="Analytics" :subtext="pageSubtext" />
 
-  <nav class="mb-4 flex gap-2 border-b border-gray-200 pb-2 dark:border-ucs-800" aria-label="Analytics source">
+  <p v-if="!sourceTabs.length" class="text-sm text-gray-600 dark:text-gray-300">
+    No analytics tab is granted for this role.
+  </p>
+
+  <nav v-else class="mb-4 flex gap-2 border-b border-gray-200 pb-2 dark:border-ucs-800" aria-label="Analytics source">
     <button v-for="source in sourceTabs" :key="source.id" type="button"
       class="rounded-t-lg border-b-2 px-4 py-2 text-sm font-medium transition-colors"
       :class="sourceTab === source.id
@@ -307,20 +311,21 @@
 
   </template>
 
-  <FfarsEligibilitySection v-else />
+  <FfarsEligibilitySection v-else-if="sourceTab === 'ffars'" />
 
   <DuplicateResolutionDialog v-model="duplicateDialogOpen" :scope="duplicateScope" :nin="duplicateNin"
     @resolved="onDuplicateResolved" />
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import PageTitle from '@/components/layout/PageTitle.vue'
 import CouncilHierarchyHero from '@/components/layout/CouncilHierarchyHero.vue'
 import HrhisRegistrationsSection from '@/components/analytics/HrhisRegistrationsSection.vue'
 import FfarsEligibilitySection from '@/components/analytics/FfarsEligibilitySection.vue'
 import DuplicateResolutionDialog from '@/components/dialogs/DuplicateResolutionDialog.vue'
 import { useAuthStore } from '@/stores/auth'
+import { canAccessAnalyticsTab, type AnalyticsTab } from '@/utils/analyticsTabPermissions'
 
 interface Ward {
   name: string
@@ -457,11 +462,20 @@ const hierarchyLoading = ref(false)
 const hierarchyError = ref('')
 const error = ref('')
 const data = ref<AnalyticsData | null>(null)
-const sourceTab = ref<'hrhis' | 'ffars'>('hrhis')
-const sourceTabs = [
-  { id: 'hrhis' as const, label: 'HRHIS' },
-  { id: 'ffars' as const, label: 'FFARS' },
-]
+const sourceTab = ref<AnalyticsTab>('hrhis')
+const sourceTabs = computed(() => {
+  const tabs: Array<{ id: AnalyticsTab; label: string }> = []
+  if (canAccessAnalyticsTab(auth.permissions, 'hrhis')) tabs.push({ id: 'hrhis', label: 'HRHIS' })
+  if (canAccessAnalyticsTab(auth.permissions, 'ffars')) tabs.push({ id: 'ffars', label: 'FFARS' })
+  return tabs
+})
+const pageSubtext = computed(() => sourceTabs.value.map((tab) => tab.label).join(' and ') || 'Analytics')
+
+watch(sourceTabs, (tabs) => {
+  if (!tabs.some((tab) => tab.id === sourceTab.value)) {
+    sourceTab.value = tabs[0]?.id ?? 'hrhis'
+  }
+}, { immediate: true })
 const activeTab = ref<'accepted' | 'rejected' | 'updates' | 'duplicates'>('accepted')
 const selectedFacilities = ref<string[]>([])
 const facilityFilterOpen = ref(false)
