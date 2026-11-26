@@ -1,13 +1,13 @@
 <template>
   <section class="flex flex-col gap-6">
-    <div>
+    <div v-if="visibleSyncItems.length">
       <h2 class="text-lg font-semibold text-ucs-700 dark:text-ucs-200 mb-3">Data sync</h2>
       <p class="text-sm text-gray-600 dark:text-gray-300 mb-4">
         DHIS2 users and OpenMRS locations.
       </p>
       <div class="grid gap-4 lg:grid-cols-2">
         <article
-          v-for="item in syncItems"
+          v-for="item in visibleSyncItems"
           :key="item.path"
           class="rounded-xl border border-gray-200 dark:border-ucs-800 bg-white dark:bg-ucs-900/40 p-5 shadow-sm">
           <h3 class="text-base font-semibold text-gray-900 dark:text-white">{{ item.title }}</h3>
@@ -107,14 +107,17 @@ const syncItems = [
     title: 'DHIS2 user sync',
     description: 'Sync DHIS2 users into the local database.',
     actionLabel: 'Sync DHIS2',
+    permission: 'dashboard:sync:dhis2',
   },
   {
     path: 'facilities' as const,
     title: 'OpenMRS location sync',
     description: 'Sync OpenMRS locations from the API.',
     actionLabel: 'Sync locations',
+    permission: 'dashboard:sync:openmrs',
   },
 ]
+const visibleSyncItems = computed(() => syncItems.filter((item) => auth.hasPermission(item.permission)))
 
 const devStatus = reactive<Record<string, 'idle' | 'running' | 'success' | 'error'>>({})
 const devMessages = reactive<Record<string, string>>({})
@@ -192,10 +195,10 @@ async function runDevTool(tool: (typeof devTools)[0]) {
 }
 
 watch(
-  () => syncItems.map((item) => jobs.value[item.path]?.logs.length ?? 0).join(','),
+  () => visibleSyncItems.value.map((item) => jobs.value[item.path]?.logs.length ?? 0).join(','),
   async () => {
     await nextTick()
-    for (const item of syncItems) {
+    for (const item of visibleSyncItems.value) {
       const box = logBoxes.value[item.path]
       if (box) box.scrollTop = box.scrollHeight
     }

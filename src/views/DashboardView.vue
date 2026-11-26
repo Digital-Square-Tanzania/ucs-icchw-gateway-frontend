@@ -20,7 +20,7 @@
         <template #big-number>{{ dashboardData ? formatNumber(dashboardData.dhis2Users) : 'Loading...' }}</template>
         <template #percent>{{ openMRSUsersRatio ? Math.ceil(100 - openMRSUsersRatio) + '%' : 'Loading...' }}</template>
         <template #subtext>Last Sync: {{ lastSynced.dhis2 || 'N/A' }}</template>
-        <template #sync>
+        <template v-if="canSyncDhis" #sync>
           <a href="#" @click.prevent="startSync('dhis2')"
             class="text-ucs-500 hover:text-ucs-800 dark:text-ucs-400 dark:hover:text-ucs-200">
             {{ syncStatus.dhis2 === 'syncing' ? 'Syncing...' : 'Sync DHIS2' }}
@@ -45,7 +45,7 @@
         <template #big-number>{{ dashboardData ? formatNumber(dashboardData.facilities) : 'Loading...' }}</template>
         <template #percent>+12</template>
         <template #subtext>Last Sync: {{ lastSynced.facilities || 'N/A' }}</template>
-        <template #sync>
+        <template v-if="canSyncOpenMrs" #sync>
           <a href="#" @click.prevent="startSync('facilities')"
             class="text-ucs-500 hover:text-ucs-800 dark:text-ucs-400 dark:hover:text-ucs-200">
             {{ syncStatus.facilities === 'syncing' ? 'Syncing...' : 'Sync OpenMRS' }}
@@ -109,8 +109,11 @@ import { useToast } from 'primevue/usetoast'
 import BoxInfograms from '@/components/charts/BoxInfograms.vue'
 import { useSyncStore } from '@/stores/sync'
 
+const authStore = useAuthStore()
 const syncStore = useSyncStore()
 const { syncStatus, lastSynced } = storeToRefs(syncStore)
+const canSyncDhis = computed(() => authStore.hasPermission('dashboard:sync:dhis2'))
+const canSyncOpenMrs = computed(() => authStore.hasPermission('dashboard:sync:openmrs'))
 const startSync = (path: string) => syncStore.startSync(path)
 
 let stopSyncListener: (() => void) | undefined
