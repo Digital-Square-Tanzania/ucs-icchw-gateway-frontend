@@ -42,6 +42,7 @@ const props = withDefaults(
     incomingLabel?: string
     succeededLabel?: string
     failedLabel?: string
+    bucket?: 'day' | 'month'
   }>(),
   {
     emptyLabel: 'No HRHIS registration data for this period.',
@@ -49,6 +50,7 @@ const props = withDefaults(
     incomingLabel: 'Incoming requests',
     succeededLabel: 'Succeeded',
     failedLabel: 'Failed (open)',
+    bucket: 'day',
   },
 )
 
@@ -57,9 +59,10 @@ const hasData = computed(() => props.buckets.length > 0)
 const chartData = computed(() => ({
   labels: props.buckets.map((b) => {
     const d = new Date(`${b.day}T00:00:00`)
-    return Number.isNaN(d.getTime())
-      ? b.day
-      : d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+    if (Number.isNaN(d.getTime())) return b.day
+    return d.toLocaleDateString(undefined, props.bucket === 'month'
+      ? { month: 'short', year: 'numeric' }
+      : { month: 'short', day: 'numeric' })
   }),
   datasets: [
     {

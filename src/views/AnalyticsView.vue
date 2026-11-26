@@ -12,10 +12,9 @@
     </button>
   </nav>
 
-  <article class="rounded-xl border border-gray-200 dark:border-ucs-800 bg-white dark:bg-ucs-900/40 p-5 shadow-sm">
+  <article v-if="sourceTab === 'hrhis'" class="rounded-xl border border-gray-200 dark:border-ucs-800 bg-white dark:bg-ucs-900/40 p-5 shadow-sm">
     <CouncilHierarchyHero v-if="councilLocked" :region="selectedRegion" :district="selectedDistrict"
-      :council="selectedCouncil" :stats="sourceTab === 'hrhis' ? peerStats : null"
-      :subtitle="sourceTab === 'hrhis' ? 'HRHIS registrations for this council.' : 'FFARS eligibility for this council.'" />
+      :council="selectedCouncil" :stats="peerStats" subtitle="HRHIS registrations for this council." />
 
     <template v-else>
       <h2 class="text-base font-semibold text-gray-900 dark:text-white">Council scope</h2>
@@ -308,8 +307,7 @@
 
   </template>
 
-  <FfarsEligibilitySection v-else-if="selectedCouncil" :region="selectedRegion" :district="selectedDistrict"
-    :council="selectedCouncil" :days="days" />
+  <FfarsEligibilitySection v-else />
 
   <DuplicateResolutionDialog v-model="duplicateDialogOpen" :scope="duplicateScope" :nin="duplicateNin"
     @resolved="onDuplicateResolved" />
