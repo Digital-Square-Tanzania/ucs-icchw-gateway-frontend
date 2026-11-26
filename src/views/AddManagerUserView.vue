@@ -18,6 +18,18 @@
       <div>
         <label for="mgr-email">Email</label>
         <InputText id="mgr-email" v-model="managerForm.email" class="w-full" type="email" required size="large" />
+        <Message v-if="emailStatus === 'taken'" severity="error" size="small" class="mt-1">
+          This email is already used for a manager login.
+        </Message>
+        <Message v-else-if="emailStatus === 'invalid'" severity="warn" size="small" class="mt-1">
+          Enter a valid email address.
+        </Message>
+        <Message v-else-if="emailStatus === 'available'" severity="success" size="small" class="mt-1">
+          Email is available.
+        </Message>
+        <Message v-else-if="emailStatus === 'checking'" severity="secondary" size="small" variant="simple" class="mt-1">
+          Checking email…
+        </Message>
       </div>
       <div>
         <label for="mgr-phone">Phone (optional)</label>
@@ -152,6 +164,7 @@
 <script setup lang="ts">
 import PageTitle from "@/components/layout/PageTitle.vue";
 import { computed, onMounted, ref } from "vue";
+import { useManagerEmailCheck } from "@/utils/managerEmailAvailability";
 import { InputText, Select, Button, Message, Password } from "primevue";
 import ApiClient from "@/utilities/ApiClient";
 import { useAuthStore } from "@/stores/auth";
@@ -228,6 +241,9 @@ const managerForm = ref({
   assignedDistrict: "",
   assignedCouncil: "",
 });
+
+const managerEmail = computed(() => managerForm.value.email);
+const { status: emailStatus } = useManagerEmailCheck(apiClient, managerEmail);
 
 const passwordsMismatch = computed(() => {
   if (!passwordTouched.value && !confirmPasswordTouched.value) return false;
@@ -381,6 +397,17 @@ onMounted(async () => {
 });
 
 const submitManagerForm = async () => {
+  if (emailStatus.value === "taken" || emailStatus.value === "invalid") {
+    toast.add({
+      severity: "error",
+      summary: "Email unavailable",
+      detail: emailStatus.value === "taken"
+        ? "This email is already used for a manager login."
+        : "Enter a valid email address.",
+      life: 4000,
+    });
+    return;
+  }
   if (!managerForm.value.roleId) {
     toast.add({ severity: "warn", summary: "Role required", detail: "Select a role.", life: 3000 });
     return;

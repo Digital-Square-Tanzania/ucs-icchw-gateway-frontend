@@ -42,6 +42,11 @@
         <label class="block text-xs text-gray-600 dark:text-gray-300">
           Email
           <input v-model="form.email" type="email" required class="mt-1 w-full rounded-lg border border-gray-300 bg-white px-2 py-1.5 text-sm dark:border-ucs-700 dark:bg-ucs-950 dark:text-ucs-100" />
+          <span v-if="emailStatus === 'taken'" class="mt-1 block text-[11px] text-red-600">This email is already used for a manager login.</span>
+          <span v-else-if="emailStatus === 'invalid'" class="mt-1 block text-[11px] text-amber-700">Enter a valid email address.</span>
+          <span v-else-if="emailStatus === 'available' && emailChanged" class="mt-1 block text-[11px] text-green-700">Email is available.</span>
+          <span v-else-if="emailStatus === 'checking'" class="mt-1 block text-[11px] text-gray-500">Checking email…</span>
+          <span v-if="exampleDomain" class="mt-1 block text-[11px] text-amber-700">example.com is not a valid email domain, so no message will be sent.</span>
         </label>
         <label class="block text-xs text-gray-600 dark:text-gray-300">
           Phone
@@ -94,6 +99,7 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
+import { useManagerEmailCheck } from '@/utils/managerEmailAvailability'
 import Dialog from 'primevue/dialog'
 import Button from 'primevue/button'
 import { useConfirm } from 'primevue/useconfirm'
@@ -280,8 +286,27 @@ function applyUser(row: ManagerRow | null) {
   }
 }
 
+const managerEmail = computed(() => form.value.email)
+const emailChanged = computed(
+  () => managerEmail.value.trim().toLowerCase() !== (props.user?.email || '').trim().toLowerCase(),
+)
+const exampleDomain = computed(() => managerEmail.value.trim().toLowerCase().endsWith('@example.com'))
+const excludeEmailOwnerId = computed(() => props.user?.id)
+const { status: emailStatus } = useManagerEmailCheck(auth.apiClient, managerEmail, excludeEmailOwnerId)
+
 async function saveDetails() {
   if (!props.user?.id) return
+  if (emailStatus.value === 'taken' || emailStatus.value === 'invalid') {
+    toast.add({
+      severity: 'error',
+      summary: 'Email unavailable',
+      detail: emailStatus.value === 'taken'
+        ? 'This email is already used for a manager login.'
+        : 'Enter a valid email address.',
+      life: 4000,
+    })
+    return
+  }
   saving.value = true
   try {
     const response = await auth.apiClient.put<{ message?: string }>(`/user/admin/manager/${props.user.id}`, {
@@ -295,7 +320,7 @@ async function saveDetails() {
     toast.add({
       severity: 'error',
       summary: 'Manager user',
-      detail: (error as { response?: { data?: { message?: string } } }).response?.data?.message || 'Could not save the user.',
+      detail: typeof error === 'string' ? error : 'Could not save the user.',
       life: 5000,
     })
   } finally {
@@ -305,6 +330,15 @@ async function saveDetails() {
 
 function confirmReset() {
   if (!props.user?.id) return
+  if ((props.user.email || '').trim().toLowerCase().endsWith('@example.com')) {
+    toast.add({
+      severity: 'warn',
+      summary: 'Password reset',
+      detail: 'The email domain is not valid, so the password reset was not sent.',
+      life: 5000,
+    })
+    return
+  }
   confirm.require({
     header: 'Send password reset',
     message: `Send a one-time password link to ${props.user.email}? Their current password stays active until they use the link.`,
